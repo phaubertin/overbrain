@@ -37,19 +37,19 @@
 #define PROGRAM_SIZE (16 * 1024 * 1024)
 #define MEMORY_SIZE 30000
 
-struct {
+static struct {
     size_t size;
     char bytes[PROGRAM_SIZE];
 } program;
 
-struct {
+static struct {
     int instr_position;
     int mem_position;
 } state;
 
-unsigned char memory[MEMORY_SIZE];
+static unsigned char memory[MEMORY_SIZE];
 
-void usage(int argc, char *argv[]) {
+static void usage(int argc, char *argv[]) {
     const char *argv0;
     
     if(argc > 0) {
@@ -62,7 +62,7 @@ void usage(int argc, char *argv[]) {
     exit(EXIT_FAILURE);
 }
 
-void read_program(const char *filename) {
+static void read_program(const char *filename) {
     FILE *file = fopen(filename, "r");
     
     if(file == NULL) {
@@ -82,7 +82,7 @@ void read_program(const char *filename) {
     fclose(file);
 }
 
-void skip_instructions(int loop_level) {
+static void skip_instructions(int loop_level) {
     int start = state.instr_position;
     
     while(state.instr_position < program.size) {
@@ -107,7 +107,7 @@ void skip_instructions(int loop_level) {
     }
 }
 
-void run_instructions(int loop_level) {
+static void run_instructions(int loop_level) {
     int start = state.instr_position;
     
     while(state.instr_position < program.size) {
@@ -179,7 +179,7 @@ void run_instructions(int loop_level) {
     }
 }
 
-void run_program(void) {
+static void run_program(void) {
     run_instructions(0);
 }
 
