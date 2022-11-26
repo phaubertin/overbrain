@@ -27,13 +27,4 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-.PHONY: 
-all: bf
-
-.PHONY: bf
-bf:
-	make -C src/bf
-
-.PHONY: clean
-clean:
-	make -C src/bf clean
+CFLAGS = -O3 -std=c99 -pedantic -Wall -Werror=implicit -Werror=uninitialized -Werror=return-type

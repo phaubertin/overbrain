@@ -27,13 +27,13 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-.PHONY: 
-all: bf
+include ../../header.mk
 
-.PHONY: bf
-bf:
-	make -C src/bf
+targets = bf
+
+.PHONY: all
+all: $(targets)
 
 .PHONY: clean
 clean:
-	make -C src/bf clean
+	-rm -f $(targets)
