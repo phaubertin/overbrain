@@ -49,19 +49,6 @@ static struct {
 
 static unsigned char memory[MEMORY_SIZE];
 
-static void usage(int argc, char *argv[]) {
-    const char *argv0;
-    
-    if(argc > 0) {
-        argv0 = argv[0];
-    } else {
-        argv0 = "bf";
-    }
-    
-    fprintf(stderr, "USAGE: %s program_file\n", argv0);
-    exit(EXIT_FAILURE);
-}
-
 static void read_program(const char *filename) {
     FILE *file = fopen(filename, "r");
     
@@ -194,6 +181,19 @@ static void run_instructions(int loop_level) {
 
 static void run_program(void) {
     run_instructions(0);
+}
+
+static void usage(int argc, char *argv[]) {
+    const char *argv0;
+    
+    if(argc > 0) {
+        argv0 = argv[0];
+    } else {
+        argv0 = "bf";
+    }
+    
+    fprintf(stderr, "USAGE: %s program_file\n", argv0);
+    exit(EXIT_FAILURE);
 }
 
 int main(int argc, char *argv[]) {
