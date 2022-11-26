@@ -82,6 +82,26 @@ static void read_program(const char *filename) {
     fclose(file);
 }
 
+static void check_end_of_program(int loop_level, int loop_start_position) {
+    /* If we reach the end of the program but are not at loop nesting level 0,
+     * it means we are inside a loop body and this loop is missing its closing
+     * ']'. */
+    if(loop_level != 0) {
+        fprintf(stderr, "Error: found unmatched '[' at position %d\n", loop_start_position);
+        exit(EXIT_FAILURE);
+    }
+}
+
+static void check_loop_end(int loop_level, int loop_end_position) {
+    /* If loop level is zero, it means we are not inside a loop body. If we
+     * encounter a closing ']' in this situation, it means there is at least on
+     * superfluous ']' in the program. */
+    if(loop_level == 0) {
+        fprintf(stderr, "Error: found unmatched ']' at position %d\n", loop_end_position);
+        exit(EXIT_FAILURE);
+    }
+}
+
 static void skip_instructions(int loop_level) {
     int start = state.instr_position;
     
@@ -93,18 +113,12 @@ static void skip_instructions(int loop_level) {
             skip_instructions(loop_level + 1);
             break;
         case ']':
-            if(loop_level < 1) {
-                fprintf(stderr, "Error: found unmatched ']' at position %d\n", state.instr_position - 1);
-                exit(EXIT_FAILURE);
-            }
+            check_loop_end(loop_level, state.instr_position - 1);
             return;
         }
     }
     
-    if(loop_level != 0) {
-        fprintf(stderr, "Error: found unmatched '[' at position %d\n", start - 1);
-        exit(EXIT_FAILURE);
-    }
+    check_end_of_program(loop_level, start - 1);
 }
 
 static void run_instructions(int loop_level) {
@@ -161,10 +175,7 @@ static void run_instructions(int loop_level) {
             }
             break;
         case ']':
-            if(loop_level < 1) {
-                fprintf(stderr, "Error: found unmatched ']' at position %d\n", state.instr_position - 1);
-                exit(EXIT_FAILURE);
-            }
+            check_loop_end(loop_level, state.instr_position - 1);
             if(memory[state.mem_position] == 0) {
                 return;
             }
@@ -173,10 +184,7 @@ static void run_instructions(int loop_level) {
         }
     }
     
-    if(loop_level != 0) {
-        fprintf(stderr, "Error: found unmatched '[' at position %d\n", start - 1);
-        exit(EXIT_FAILURE);
-    }
+    check_end_of_program(loop_level, start - 1);
 }
 
 static void run_program(void) {
