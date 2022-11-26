@@ -37,3 +37,7 @@ bf:
 .PHONY: clean
 clean:
 	make -C src/bf clean
+
+.PHONY: run-hello
+run-hello: bf
+	src/bf/bf examples/hello.bf
