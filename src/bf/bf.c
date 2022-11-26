@@ -79,6 +79,11 @@ static void read_program(const char *filename) {
         exit(EXIT_FAILURE);
     }
     
+    if(! feof(file)) {
+        fprintf(stderr, "Error: program is too long\n");
+        exit(EXIT_FAILURE);
+    }
+    
     fclose(file);
 }
 
