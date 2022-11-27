@@ -35,6 +35,7 @@
 #include "backend/codegen_c.h"
 #include "frontend/parser.h"
 #include "ir/node.h"
+#include "optimizations/optimizations.h"
 
 static struct node *read_program(const char *filename) {
     FILE *file = fopen(filename, "r");
@@ -70,8 +71,9 @@ int main(int argc, char *argv[]) {
     }
     
     struct node *program = read_program(argv[1]);
+    const struct node *optimized = run_optimizations(program);
     
-    codegen_c_generate(stdout, program);
+    codegen_c_generate(stdout, optimized);
     
     node_free(program);
 

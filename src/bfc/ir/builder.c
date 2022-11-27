@@ -37,6 +37,7 @@ void builder_initialize_empty(struct builder *builder) {
 }
 
 void builder_append_node(struct builder *builder, struct node *node) {
+    node->next = NULL;
     if(builder->tail == NULL) {
         builder->head = node;
         builder->tail = node;

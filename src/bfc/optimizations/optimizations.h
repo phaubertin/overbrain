@@ -28,51 +28,11 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef BFC_NODE_H
-#define BFC_NODE_H
+#ifndef BFC_OPTIMIZATIONS_H
+#define BFC_OPTIMIZATIONS_H
 
-typedef enum {
-    /* add a possibly negative value n to current memory cell:
-     *  - for + instruction, n is 1
-     *  - for - instruction, n is -1
-     *  - optimization passes can produce nodes when n has other values */
-    NODE_ADD,
-    /* move memory position by a possibly negative value n to the right:
-     *  - for > instruction, n is 1
-     *  - for < instruction, n is -1
-     *  - optimization passes can produce nodes when n has other values */
-    NODE_RIGHT,
-    /* input (,) instruction */
-    NODE_IN,
-    /* output (.) instruction */
-    NODE_OUT,
-    /* a loop with a body */
-    NODE_LOOP,
-} node_type;
+#include "../ir/node.h"
 
-struct node {
-    /* node type */
-    node_type type;
-    /* node value "n" for NODE_ADD and NODE_RIGHT */
-    int n;
-    /* next node, NULL to represent terminator */
-    struct node *next;
-    /* for NODE_LOOP nodes only: first node inside the loop body */
-    struct node *body;
-};
-
-struct node *node_new_add(int n);
-
-struct node *node_new_right(int n);
-
-struct node *node_new_in(void);
-
-struct node *node_new_out(void);
-
-struct node *node_new_loop(struct node *body);
-
-struct node *node_clone(struct node *node);
-
-void node_free(struct node *node);
+struct node *run_optimizations(struct node *node);
 
 #endif

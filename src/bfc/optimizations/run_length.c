@@ -28,85 +28,68 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include "builder.h"
-#include "node.h"
+#include <stddef.h>
+#include "../ir/builder.h"
+#include "run_length.h"
 
-static struct node *node_new(node_type type) {
-    struct node *node = malloc(sizeof(struct node));
+struct node *optimize_add(struct builder *builder, struct node *node) {
+    int n = 0;
     
-    if(node == NULL) {
-        fprintf(stderr, "Error: memory allocation (node)\n");
-        exit(EXIT_FAILURE);
+    while(node != NULL && node->type == NODE_ADD) {
+        n += node->n;
+        node = node->next;
     }
     
-    memset(node, 0, sizeof(struct node));
+    if(n != 0) {
+        builder_append_node(builder, node_new_add(n));
+    }
     
-    node->type = type;
+    return node;
+}
+
+struct node *optimize_right(struct builder *builder, struct node *node) {
+    int n = 0;
+    
+    while(node != NULL && node->type == NODE_RIGHT) {
+        n += node->n;
+        node = node->next;
+    }
+    
+    if(n != 0) {
+        builder_append_node(builder, node_new_right(n));
+    }
     
     return node;
 }
 
-struct node *node_new_add(int n) {
-    struct node *node = node_new(NODE_ADD);
-    node->n = n;
-    return node;
-}
-
-struct node *node_new_right(int n) {
-    struct node *node = node_new(NODE_RIGHT);
-    node->n = n;
-    return node;
-}
-
-struct node *node_new_in(void) {
-    return node_new(NODE_IN);
-}
-
-struct node *node_new_out(void) {
-    return node_new(NODE_OUT);
-}
-
-struct node *node_new_loop(struct node *body) {
-    struct node *node = node_new(NODE_LOOP);
-    node->body = body;
-    return node;
-}
-
-static struct node *clone_body(struct node *node) {
+struct node *run_length_optimize(struct node *node) {
     struct builder builder;
     builder_initialize_empty(&builder);
     
     while(node != NULL) {
-        builder_append_node(&builder, node_clone(node));
-        node = node->next;
+        switch(node->type) {
+        case NODE_ADD:
+            node = optimize_add(&builder, node);
+            break;
+        case NODE_RIGHT:
+            node = optimize_right(&builder, node);
+            break;
+        case NODE_LOOP:
+        {
+            struct node *body = run_length_optimize(node->body);
+            
+            /* Maybe we optimized the whole body away. */
+            if(body != NULL) {
+                builder_append_node(&builder, node_new_loop(body));
+            }
+        }
+            node = node->next;
+            break;
+        default:
+            builder_append_node(&builder, node_clone(node));
+            node = node->next;
+        }
     }
     
     return builder_get_first(&builder);
-}
-
-struct node *node_clone(struct node *node) {
-    struct node *clone = node_new(node->type);
-    
-    clone->n = node->n;
-    
-    if(node->type == NODE_LOOP) {
-        clone->body = clone_body(node->body);
-    }
-    
-    return clone;
-}
-
-void node_free(struct node *node) {
-    while(node != NULL) {
-        if(node->type == NODE_LOOP) {
-            node_free(node->body);
-        }
-        
-        struct node *next = node->next;
-        free(node);
-        node = next;
-    }
 }

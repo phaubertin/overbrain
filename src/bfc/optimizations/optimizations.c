@@ -27,52 +27,13 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+ 
+#include "optimizations.h"
+#include "run_length.h"
 
-#ifndef BFC_NODE_H
-#define BFC_NODE_H
-
-typedef enum {
-    /* add a possibly negative value n to current memory cell:
-     *  - for + instruction, n is 1
-     *  - for - instruction, n is -1
-     *  - optimization passes can produce nodes when n has other values */
-    NODE_ADD,
-    /* move memory position by a possibly negative value n to the right:
-     *  - for > instruction, n is 1
-     *  - for < instruction, n is -1
-     *  - optimization passes can produce nodes when n has other values */
-    NODE_RIGHT,
-    /* input (,) instruction */
-    NODE_IN,
-    /* output (.) instruction */
-    NODE_OUT,
-    /* a loop with a body */
-    NODE_LOOP,
-} node_type;
-
-struct node {
-    /* node type */
-    node_type type;
-    /* node value "n" for NODE_ADD and NODE_RIGHT */
-    int n;
-    /* next node, NULL to represent terminator */
-    struct node *next;
-    /* for NODE_LOOP nodes only: first node inside the loop body */
-    struct node *body;
-};
-
-struct node *node_new_add(int n);
-
-struct node *node_new_right(int n);
-
-struct node *node_new_in(void);
-
-struct node *node_new_out(void);
-
-struct node *node_new_loop(struct node *body);
-
-struct node *node_clone(struct node *node);
-
-void node_free(struct node *node);
-
-#endif
+struct node *run_optimizations(struct node *node) {
+    /* memory allocation contract: caller is responsible for freeing the
+     * original (if it so chooses). This function is only responsible for
+     * freeing any intermediate trees it creates. */
+    return run_length_optimize(node);
+}

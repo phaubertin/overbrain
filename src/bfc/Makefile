@@ -35,6 +35,8 @@ sources = \
 	ir/builder.c \
 	ir/node.c \
 	backend/codegen_c.c \
+	optimizations/optimizations.c \
+	optimizations/run_length.c \
 	frontend/parser.c
 
 .PHONY: all
