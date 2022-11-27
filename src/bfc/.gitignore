@@ -26,27 +26,10 @@
 # ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+# ------------------------------------------------------------------------------
+# object files
+*.o
 
-.PHONY: 
-all: bf bfc
-
-.PHONY: bf
-bf:
-	make -C src/bf
-
-.PHONY: bfc
-bfc:
-	make -C src/bfc
-
-.PHONY: clean
-clean:
-	make -C src/bf clean
-	make -C src/bfc clean
-
-.PHONY: run-hello
-run-hello: bf
-	src/bf/bf examples/hello.bf
-
-.PHONY: build-hello
-build-hello: bfc
-	src/bfc/bfc examples/hello.bf
+# target
+bfc

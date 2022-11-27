@@ -27,26 +27,16 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-.PHONY: 
-all: bf bfc
+include ../../header.mk
 
-.PHONY: bf
-bf:
-	make -C src/bf
+targets = bfc
+sources = bfc.c builder.c node.c parser.c
 
-.PHONY: bfc
-bfc:
-	make -C src/bfc
+.PHONY: all
+all: $(targets)
 
 .PHONY: clean
 clean:
-	make -C src/bf clean
-	make -C src/bfc clean
+	-rm -f $(targets)
 
-.PHONY: run-hello
-run-hello: bf
-	src/bf/bf examples/hello.bf
-
-.PHONY: build-hello
-build-hello: bfc
-	src/bfc/bfc examples/hello.bf
+bfc: $(sources)

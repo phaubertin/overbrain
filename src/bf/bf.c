@@ -86,7 +86,7 @@ static void check_end_of_program(int loop_level, int loop_start_position) {
 
 static void check_loop_end(int loop_level, int loop_end_position) {
     /* If loop level is zero, it means we are not inside a loop body. If we
-     * encounter a closing ']' in this situation, it means there is at least on
+     * encounter a closing ']' in this situation, it means there is at least one
      * superfluous ']' in the program. */
     if(loop_level == 0) {
         fprintf(stderr, "Error: found unmatched ']' at position %d\n", loop_end_position);
@@ -146,18 +146,19 @@ static void run_instructions(int loop_level) {
             putc(memory[state.mem_position], stdout);
             break;
         case ',':
-            errno = 0;
-            int input = fgetc(stdin);
-            
-            if(input == EOF) {
-                if(errno == 0) {
-                    fprintf(stderr, "Error: reached end of input\n");
-                } else {
-                    fprintf(stderr, "Error when reading input: %s\n", strerror(errno));
+            {
+                int input = fgetc(stdin);
+                
+                if(input == EOF) {
+                    if(ferror(stdin)) {
+                        fprintf(stderr, "Error when reading input: %s\n", strerror(errno));
+                    } else {
+                        fprintf(stderr, "Error: reached end of input\n");
+                    }
+                    exit(EXIT_FAILURE);
                 }
-                exit(EXIT_FAILURE);
+                memory[state.mem_position] = input;
             }
-            memory[state.mem_position] = input;
             break;
         case '[':
             if(memory[state.mem_position] == 0) {
