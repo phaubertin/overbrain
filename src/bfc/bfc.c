@@ -71,11 +71,15 @@ int main(int argc, char *argv[]) {
     }
     
     struct node *program = read_program(argv[1]);
-    const struct node *optimized = run_optimizations(program);
+    
+    struct node *optimized = run_optimizations(program);
+    
+    /* From this point, we only need the optimized tree. */
+    node_free(program);
     
     codegen_c_generate(stdout, optimized);
     
-    node_free(program);
+    node_free(optimized);
 
     return EXIT_SUCCESS;
 }
