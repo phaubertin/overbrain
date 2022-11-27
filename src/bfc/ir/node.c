@@ -75,9 +75,23 @@ struct node *node_new_loop(struct node *body) {
     return node;
 }
 
-static struct node *clone_body(struct node *node) {
+struct node *node_clone(struct node *node) {
+    struct node *clone = node_new(node->type);
+    
+    clone->n = node->n;
+    
+    if(node->type == NODE_LOOP) {
+        clone->body = node_clone_tree(node->body);
+    }
+    
+    return clone;
+}
+
+struct node *node_clone_tree(struct node *root) {
     struct builder builder;
     builder_initialize_empty(&builder);
+    
+    struct node *node = root;
     
     while(node != NULL) {
         builder_append_node(&builder, node_clone(node));
@@ -85,18 +99,6 @@ static struct node *clone_body(struct node *node) {
     }
     
     return builder_get_first(&builder);
-}
-
-struct node *node_clone(struct node *node) {
-    struct node *clone = node_new(node->type);
-    
-    clone->n = node->n;
-    
-    if(node->type == NODE_LOOP) {
-        clone->body = clone_body(node->body);
-    }
-    
-    return clone;
 }
 
 void node_free(struct node *node) {

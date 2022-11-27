@@ -73,6 +73,8 @@ struct node *node_new_loop(struct node *body);
 
 struct node *node_clone(struct node *node);
 
+struct node *node_clone_tree(struct node *root);
+
 void node_free(struct node *node);
 
 #endif
