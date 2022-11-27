@@ -32,8 +32,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
-#include "builder.h"
-#include "node.h"
+#include "../ir/builder.h"
 #include "parser.h"
 
 struct position {

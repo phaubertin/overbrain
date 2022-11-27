@@ -28,12 +28,12 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef BFC_PARSER_H
-#define BFC_PARSER_H
+#ifndef BFC_CODEGEN_C_H
+#define BFC_CODEGEN_C_H
 
 #include <stdio.h>
-#include "node.h"
+#include "../ir/node.h"
 
-struct node *parse_program(FILE *f);
+void codegen_c_generate(FILE *f, const struct node *root);
 
 #endif

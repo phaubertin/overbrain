@@ -32,9 +32,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "codegen_c.h"
-#include "node.h"
-#include "parser.h"
+#include "backend/codegen_c.h"
+#include "frontend/parser.h"
+#include "ir/node.h"
 
 static struct node *read_program(const char *filename) {
     FILE *file = fopen(filename, "r");
