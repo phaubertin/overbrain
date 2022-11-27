@@ -30,7 +30,7 @@
 include ../../header.mk
 
 targets = bfc
-sources = bfc.c builder.c node.c parser.c
+sources = bfc.c builder.c codegen_c.c node.c parser.c
 
 .PHONY: all
 all: $(targets)

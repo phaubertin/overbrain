@@ -27,53 +27,13 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
- 
-#include <errno.h>
+
+#ifndef BFC_CODEGEN_C_H
+#define BFC_CODEGEN_C_H
+
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include "codegen_c.h"
 #include "node.h"
-#include "parser.h"
 
-static struct node *read_program(const char *filename) {
-    FILE *file = fopen(filename, "r");
-    
-    if(file == NULL) {
-        fprintf(stderr, "Error opening file: %s\n", strerror(errno));
-        exit(EXIT_FAILURE);
-    }
-    
-    struct node *program = parse_program(file);
-    
-    fclose(file);
-    
-    return program;
-}
+void codegen_c_generate(FILE *f, const struct node *root);
 
-static void usage(int argc, char *argv[]) {
-    const char *argv0;
-    
-    if(argc > 0) {
-        argv0 = argv[0];
-    } else {
-        argv0 = "bfc";
-    }
-    
-    fprintf(stderr, "USAGE: %s program_file\n", argv0);
-    exit(EXIT_FAILURE);
-}
-
-int main(int argc, char *argv[]) {
-    if(argc != 2) {
-        usage(argc, argv);
-    }
-    
-    struct node *program = read_program(argv[1]);
-    
-    codegen_c_generate(stdout, program);
-    
-    node_free(program);
-
-    return EXIT_SUCCESS;
-}
+#endif
