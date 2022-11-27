@@ -28,6 +28,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <stdbool.h>
 #include "codegen_c.h"
 
 static int indentation_width(int indentation_level) {
@@ -45,7 +46,106 @@ static void initialize_state(struct state *state, FILE *f) {
     state->f = f;
 }
 
-static void generate_header(struct state *state) {
+static bool has_positive_right_node(const struct node *node) {
+    while(node != NULL) {
+        if(node->type == NODE_ADD && node->n > 0) {
+            return true;
+        }
+        
+        if(node->type == NODE_LOOP && has_positive_right_node(node->body)) {
+            return true;
+        }
+        
+        node = node->next;
+    }
+    return false;
+}
+
+static void emit_fail_too_far_right_decl(struct state *state, const struct node *root) {
+    if(! has_positive_right_node(root)) {
+        return;
+    }
+    
+    fprintf(state->f, "static void fail_too_far_right(void) {\n");
+    
+    fprintf(state->f, INDENTFMT "fprintf(stderr, \"Error: memory position out of bounds (overflow - too far right)\\n\");\n", INDENTARGS(1));
+    fprintf(state->f, INDENTFMT "exit(EXIT_FAILURE);\n", INDENTARGS(1));
+    
+    fprintf(state->f, "}\n");
+    fprintf(state->f, "\n");
+}
+
+static bool has_negative_right_node(const struct node *node) {
+    while(node != NULL) {
+        if(node->type == NODE_ADD && node->n < 0) {
+            return true;
+        }
+        
+        if(node->type == NODE_LOOP && has_negative_right_node(node->body)) {
+            return true;
+        }
+        
+        node = node->next;
+    }
+    return false;
+}
+
+static void emit_fail_too_far_left_decl(struct state *state, const struct node *root) {
+    if(! has_negative_right_node(root)) {
+        return;
+    }
+    
+    fprintf(state->f, "static void fail_too_far_left(void) {\n");
+    
+    fprintf(state->f, INDENTFMT "fprintf(stderr, \"Error: memory position out of bounds (underflow - too far left)\\n\");\n", INDENTARGS(1));
+    fprintf(state->f, INDENTFMT "exit(EXIT_FAILURE);\n", INDENTARGS(1));
+    
+    fprintf(state->f, "}\n");
+    fprintf(state->f, "\n");
+}
+
+static bool has_in_node(const struct node *node) {
+    while(node != NULL) {
+        if(node->type == NODE_IN) {
+            return true;
+        }
+        
+        if(node->type == NODE_LOOP && has_in_node(node->body)) {
+            return true;
+        }
+        
+        node = node->next;
+    }
+    return false;
+}
+
+static void emit_check_input_decl(struct state *state, const struct node *root) {
+    if(! has_in_node(root)) {
+        return;
+    }
+    
+    fprintf(state->f, "static void check_input(int inp) {\n");
+    
+    fprintf(state->f, INDENTFMT "if(inp == EOF) {\n", INDENTARGS(1));
+    
+    fprintf(state->f, INDENTFMT "if(ferror(stdin)) {\n", INDENTARGS(2));
+    
+    fprintf(state->f, INDENTFMT "fprintf(stderr, \"Error when reading input: %%s\\n\", strerror(errno));\n", INDENTARGS(3));
+    
+    fprintf(state->f, INDENTFMT "} else {\n", INDENTARGS(2));
+    
+    fprintf(state->f, INDENTFMT "fprintf(stderr, \"Error: reached end of input\\n\");\n", INDENTARGS(3));
+    
+    fprintf(state->f, INDENTFMT "}\n", INDENTARGS(2));
+    fprintf(state->f, INDENTFMT "exit(EXIT_FAILURE);\n", INDENTARGS(2));
+    
+    fprintf(state->f, INDENTFMT "}\n", INDENTARGS(1));
+    
+    fprintf(state->f, "}\n");
+    fprintf(state->f, "\n");
+}
+
+static void generate_header(struct state *state, const struct node *root) {
     fprintf(state->f, "#include <errno.h>\n");
     fprintf(state->f, "#include <stdio.h>\n");
     fprintf(state->f, "#include <stdlib.h>\n");
@@ -54,6 +154,11 @@ static void generate_header(struct state *state) {
     fprintf(state->f, "static char m[30000];\n");
     fprintf(state->f, "static int p = 0;\n");
     fprintf(state->f, "\n");
+    
+    emit_fail_too_far_right_decl(state, root);
+    emit_fail_too_far_left_decl(state, root);
+    emit_check_input_decl(state, root);
+    
     fprintf(state->f, "int main(int args, char *argv[]) {\n");
 }
 
@@ -69,15 +174,13 @@ static void emit_node_right(struct state *state, const struct node *node, int lo
     if(node->n > 0) {
         fprintf(state->f, INDENTFMT "if(p > sizeof(m)) {\n", INDENTARGS(loop_level + 1));
         
-        fprintf(state->f, INDENTFMT "fprintf(stderr, \"Error: memory position out of bounds (overflow)\\n\");\n", INDENTARGS(loop_level + 2));
-        fprintf(state->f, INDENTFMT "exit(EXIT_FAILURE);\n", INDENTARGS(loop_level + 2));
+        fprintf(state->f, INDENTFMT "fail_too_far_right();\n", INDENTARGS(loop_level + 2));
         
         fprintf(state->f, INDENTFMT "}\n", INDENTARGS(loop_level + 1));
     } else {
         fprintf(state->f, INDENTFMT "if(p < 0) {\n", INDENTARGS(loop_level + 1));
         
-        fprintf(state->f, INDENTFMT "fprintf(stderr, \"Error: memory position out of bounds (underflow)\\n\");\n", INDENTARGS(loop_level + 2));
-        fprintf(state->f, INDENTFMT "exit(EXIT_FAILURE);\n", INDENTARGS(loop_level + 2));
+        fprintf(state->f, INDENTFMT "fail_too_far_left();\n", INDENTARGS(loop_level + 2));
         
         fprintf(state->f, INDENTFMT "}\n", INDENTARGS(loop_level + 1));
     }
@@ -86,19 +189,7 @@ static void emit_node_right(struct state *state, const struct node *node, int lo
 static void emit_node_in(struct state *state, const struct node *node, int loop_level) {
     fprintf(state->f, INDENTFMT "/* in */\n", INDENTARGS(loop_level + 1));
     fprintf(state->f, INDENTFMT "inp = fgetc(stdin);\n", INDENTARGS(loop_level + 1));
-    fprintf(state->f, INDENTFMT "if(inp == EOF) {\n", INDENTARGS(loop_level + 1));
-    
-    fprintf(state->f, INDENTFMT "if(ferror(stdin)) {\n", INDENTARGS(loop_level + 2));
-    
-    fprintf(state->f, INDENTFMT "fprintf(stderr, \"Error when reading input: %%s\\n\", strerror(errno));\n", INDENTARGS(loop_level + 3));
-    
-    fprintf(state->f, INDENTFMT "} else {\n", INDENTARGS(loop_level + 2));
-    
-    fprintf(state->f, INDENTFMT "fprintf(stderr, \"Error: reached end of input\\n\");\n", INDENTARGS(loop_level + 3));
-    
-    fprintf(state->f, INDENTFMT "}\n", INDENTARGS(loop_level + 2));
-    
-    fprintf(state->f, INDENTFMT "}\n", INDENTARGS(loop_level + 1));
+    fprintf(state->f, INDENTFMT "check_input(inp);\n", INDENTARGS(loop_level + 1));
     fprintf(state->f, INDENTFMT "m[p] = inp;\n", INDENTARGS(loop_level + 1));
 }
 
@@ -161,7 +252,7 @@ static void generate_footer(struct state *state) {
 void codegen_c_generate(FILE *f, const struct node *root) {
     struct state state;
     initialize_state(&state, f);
-    generate_header(&state);
+    generate_header(&state, root);
     generate_code(&state, root, 0);
     generate_footer(&state);
 }
