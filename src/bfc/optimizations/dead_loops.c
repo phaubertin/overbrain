@@ -31,14 +31,14 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include "../ir/builder.h"
-#include "loop_elimination.h"
+#include "dead_loops.h"
 
 /* This optimization pass removes loops that are known to never be executed,
  * i.e. loops where the value of the current cell is known to always be zero
  * on entry. Such loops are likely to be comments that contain instruction
  * characters. */
 
-struct node *loop_elimination_recursive(struct node *node, int level) {
+struct node *remove_dead_loops_recursive(struct node *node, int level) {
     struct builder builder;
     builder_initialize_empty(&builder);
     
@@ -60,7 +60,7 @@ struct node *loop_elimination_recursive(struct node *node, int level) {
         switch(node->type) {
         case NODE_LOOP:
             if(!is_zero) {
-                struct node *body = loop_elimination_recursive(node->body, level + 1);
+                struct node *body = remove_dead_loops_recursive(node->body, level + 1);
                 
                 if(body != NULL) {
                     builder_append_node(&builder, node_new_loop(body));
@@ -92,6 +92,6 @@ struct node *loop_elimination_recursive(struct node *node, int level) {
     return builder_get_first(&builder);
 }
 
-struct node *loop_elimination_optimize(struct node *node) {
-    return loop_elimination_recursive(node, 0);
+struct node *remove_dead_loops(struct node *node) {
+    return remove_dead_loops_recursive(node, 0);
 }

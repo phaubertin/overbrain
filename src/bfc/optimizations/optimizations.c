@@ -28,7 +28,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
  
-#include "loop_elimination.h"
+#include "dead_loops.h"
 #include "optimizations.h"
 #include "run_length.h"
 
@@ -39,9 +39,9 @@ struct node *run_optimizations(struct node *node) {
     
     struct node *run_length = run_length_optimize(node);
     
-    struct node *loop_elimination = loop_elimination_optimize(run_length);
+    struct node *no_dead_loops = remove_dead_loops(run_length);
     
     node_free(run_length);
      
-    return loop_elimination;
+    return no_dead_loops;
 }

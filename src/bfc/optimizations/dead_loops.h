@@ -28,11 +28,11 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef BFC_LOOP_ELIMINATION_H
-#define BFC_LOOP_ELIMINATION_H
+#ifndef BFC_DEAD_LOOPS_H
+#define BFC_DEAD_LOOPS_H
 
 #include "../ir/node.h"
 
-struct node *loop_elimination_optimize(struct node *node);
+struct node *remove_dead_loops(struct node *node);
 
 #endif

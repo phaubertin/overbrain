@@ -35,7 +35,7 @@ sources = \
 	ir/builder.c \
 	ir/node.c \
 	backend/codegen_c.c \
-	optimizations/loop_elimination.c \
+	optimizations/dead_loops.c \
 	optimizations/optimizations.c \
 	optimizations/run_length.c \
 	frontend/parser.c
