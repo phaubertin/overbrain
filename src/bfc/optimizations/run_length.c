@@ -44,7 +44,7 @@ static struct node *optimize_sequence(struct builder *builder, struct node *node
     if(n != 0) {
         switch(type) {
         case NODE_ADD:
-            builder_append_node(builder, node_new_add(n));
+            builder_append_node(builder, node_new_add(n, 0));
             break;
         case NODE_RIGHT:
             builder_append_node(builder, node_new_right(n));

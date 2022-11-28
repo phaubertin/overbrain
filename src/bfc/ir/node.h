@@ -55,19 +55,21 @@ struct node {
     node_type type;
     /* node value "n" for NODE_ADD and NODE_RIGHT */
     int n;
+    /* offset of the operation relative to the current data pointer */
+    int offset;
     /* next node, NULL to represent terminator */
     struct node *next;
     /* for NODE_LOOP nodes only: first node inside the loop body */
     struct node *body;
 };
 
-struct node *node_new_add(int n);
+struct node *node_new_add(int n, int offset);
 
 struct node *node_new_right(int n);
 
-struct node *node_new_in(void);
+struct node *node_new_in(int offset);
 
-struct node *node_new_out(void);
+struct node *node_new_out(int offset);
 
 struct node *node_new_loop(struct node *body);
 

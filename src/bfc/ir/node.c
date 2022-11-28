@@ -49,9 +49,10 @@ static struct node *node_new(node_type type) {
     return node;
 }
 
-struct node *node_new_add(int n) {
+struct node *node_new_add(int n, int offset) {
     struct node *node = node_new(NODE_ADD);
     node->n = n;
+    node->offset = offset;
     return node;
 }
 
@@ -61,12 +62,16 @@ struct node *node_new_right(int n) {
     return node;
 }
 
-struct node *node_new_in(void) {
-    return node_new(NODE_IN);
+struct node *node_new_in(int offset) {
+    struct node *node = node_new(NODE_IN);
+    node->offset = offset;
+    return node;
 }
 
-struct node *node_new_out(void) {
-    return node_new(NODE_OUT);
+struct node *node_new_out(int offset) {
+    struct node *node = node_new(NODE_OUT);
+    node->offset = offset;
+    return node;
 }
 
 struct node *node_new_loop(struct node *body) {

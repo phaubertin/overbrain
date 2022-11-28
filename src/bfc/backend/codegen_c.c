@@ -162,23 +162,19 @@ static void generate_header(struct state *state, const struct node *root) {
     fprintf(state->f, "int main(int args, char *argv[]) {\n");
 }
 
-static void emit_node_add(struct state *state, const struct node *node, int loop_level) {
-    fprintf(state->f, INDENTFMT "/* add(%d) */\n", INDENTARGS(loop_level + 1), node->n);
-    fprintf(state->f, INDENTFMT "m[p] += %d;\n", INDENTARGS(loop_level + 1), node->n);
-}
-
-static void emit_node_right(struct state *state, const struct node *node, int loop_level) {
-    fprintf(state->f, INDENTFMT "/* right(%d) */\n", INDENTARGS(loop_level + 1), node->n);
-    fprintf(state->f, INDENTFMT "p += %d;\n", INDENTARGS(loop_level + 1), node->n);
+static void emit_bound_check(struct state *state, int offset, int loop_level) {
+    if(offset == 0) {
+        return;
+    }
     
-    if(node->n > 0) {
-        fprintf(state->f, INDENTFMT "if(p > sizeof(m)) {\n", INDENTARGS(loop_level + 1));
+    if(offset > 0) {
+        fprintf(state->f, INDENTFMT "if(p + %d > sizeof(m)) {\n", INDENTARGS(loop_level + 1), offset);
         
         fprintf(state->f, INDENTFMT "fail_too_far_right();\n", INDENTARGS(loop_level + 2));
         
         fprintf(state->f, INDENTFMT "}\n", INDENTARGS(loop_level + 1));
     } else {
-        fprintf(state->f, INDENTFMT "if(p < 0) {\n", INDENTARGS(loop_level + 1));
+        fprintf(state->f, INDENTFMT "if(p + %d < 0) {\n", INDENTARGS(loop_level + 1), offset);
         
         fprintf(state->f, INDENTFMT "fail_too_far_left();\n", INDENTARGS(loop_level + 2));
         
@@ -186,16 +182,30 @@ static void emit_node_right(struct state *state, const struct node *node, int lo
     }
 }
 
+static void emit_node_add(struct state *state, const struct node *node, int loop_level) {
+    fprintf(state->f, INDENTFMT "/* add(%d) */\n", INDENTARGS(loop_level + 1), node->n);
+    emit_bound_check(state, node->offset, loop_level);
+    fprintf(state->f, INDENTFMT "m[p + %d] += %d;\n", INDENTARGS(loop_level + 1), node->offset, node->n);
+}
+
+static void emit_node_right(struct state *state, const struct node *node, int loop_level) {
+    fprintf(state->f, INDENTFMT "/* right(%d) */\n", INDENTARGS(loop_level + 1), node->n);
+    emit_bound_check(state, node->n, loop_level);
+    fprintf(state->f, INDENTFMT "p += %d;\n", INDENTARGS(loop_level + 1), node->n);
+}
+
 static void emit_node_in(struct state *state, const struct node *node, int loop_level) {
     fprintf(state->f, INDENTFMT "/* in */\n", INDENTARGS(loop_level + 1));
+    emit_bound_check(state, node->offset, loop_level);
     fprintf(state->f, INDENTFMT "inp = fgetc(stdin);\n", INDENTARGS(loop_level + 1));
     fprintf(state->f, INDENTFMT "check_input(inp);\n", INDENTARGS(loop_level + 1));
-    fprintf(state->f, INDENTFMT "m[p] = inp;\n", INDENTARGS(loop_level + 1));
+    fprintf(state->f, INDENTFMT "m[p + %d] = inp;\n", INDENTARGS(loop_level + 1), node->offset);
 }
 
 static void emit_node_out(struct state *state, const struct node *node, int loop_level) {
     fprintf(state->f, INDENTFMT "/* out */\n", INDENTARGS(loop_level + 1));
-    fprintf(state->f, INDENTFMT "putc(m[p], stdout);\n", INDENTARGS(loop_level + 1));
+    emit_bound_check(state, node->offset, loop_level);
+    fprintf(state->f, INDENTFMT "putc(m[p + %d], stdout);\n", INDENTARGS(loop_level + 1), node->offset);
 }
 
 /* forward declaration because of mutual recursion with emit_node_loop() */

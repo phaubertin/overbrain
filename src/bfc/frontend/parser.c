@@ -91,11 +91,11 @@ static struct node *parse_instructions(struct state *state, int loop_level, cons
     while(state->lookahead != EOF) {
         switch(state->lookahead) {
         case '+':
-            builder_append_node(&builder, node_new_add(1));
+            builder_append_node(&builder, node_new_add(1, 0));
             consume(state);
             break;
         case '-':
-            builder_append_node(&builder, node_new_add(-1));
+            builder_append_node(&builder, node_new_add(-1, 0));
             consume(state);
             break;
         case '>':
@@ -107,11 +107,11 @@ static struct node *parse_instructions(struct state *state, int loop_level, cons
             consume(state);
             break;
         case '.':
-            builder_append_node(&builder, node_new_out());
+            builder_append_node(&builder, node_new_out(0));
             consume(state);
             break;
         case ',':
-            builder_append_node(&builder, node_new_in());
+            builder_append_node(&builder, node_new_in(0));
             consume(state);
             break;
         case '[':
