@@ -32,31 +32,26 @@
 #include "../ir/builder.h"
 #include "run_length.h"
 
-struct node *optimize_add(struct builder *builder, struct node *node) {
+static struct node *optimize_sequence(struct builder *builder, struct node *node) {
+    node_type type = node->type;
     int n = 0;
     
-    while(node != NULL && node->type == NODE_ADD) {
+    while(node != NULL && node->type == type) {
         n += node->n;
         node = node->next;
     }
     
     if(n != 0) {
-        builder_append_node(builder, node_new_add(n));
-    }
-    
-    return node;
-}
-
-struct node *optimize_right(struct builder *builder, struct node *node) {
-    int n = 0;
-    
-    while(node != NULL && node->type == NODE_RIGHT) {
-        n += node->n;
-        node = node->next;
-    }
-    
-    if(n != 0) {
-        builder_append_node(builder, node_new_right(n));
+        switch(type) {
+        case NODE_ADD:
+            builder_append_node(builder, node_new_add(n));
+            break;
+        case NODE_RIGHT:
+            builder_append_node(builder, node_new_right(n));
+            break;
+        default:
+            break;
+        }
     }
     
     return node;
@@ -69,10 +64,8 @@ struct node *run_length_optimize(struct node *node) {
     while(node != NULL) {
         switch(node->type) {
         case NODE_ADD:
-            node = optimize_add(&builder, node);
-            break;
         case NODE_RIGHT:
-            node = optimize_right(&builder, node);
+            node = optimize_sequence(&builder, node);
             break;
         case NODE_LOOP:
         {
