@@ -27,21 +27,12 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
- 
-#include "loop_elimination.h"
-#include "optimizations.h"
-#include "run_length.h"
 
-struct node *run_optimizations(struct node *node) {
-    /* memory allocation contract: caller is responsible for freeing the
-     * original (if it so chooses). This function is only responsible for
-     * freeing any intermediate trees it creates. */
-    
-    struct node *run_length = run_length_optimize(node);
-    
-    struct node *loop_elimination = loop_elimination_optimize(run_length);
-    
-    node_free(run_length);
-     
-    return loop_elimination;
-}
+#ifndef BFC_LOOP_ELIMINATION_H
+#define BFC_LOOP_ELIMINATION_H
+
+#include "../ir/node.h"
+
+struct node *loop_elimination_optimize(struct node *node);
+
+#endif
