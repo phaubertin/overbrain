@@ -40,7 +40,7 @@ clean:
 
 .PHONY: slow-hello
 slow-hello: all
-	src/bf examples/hello.bf
+	src/bf -slow examples/hello.bf
 
 .PHONY: build-hello
 build-hello: examples/hello
