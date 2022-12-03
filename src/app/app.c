@@ -77,16 +77,7 @@ int run_app(enum app app, int argc, char *argv[]) {
     const char *filename = argv[1];
     
     if(app == APP_BF) {
-        FILE *file = fopen(filename, "r");
-    
-        if(file == NULL) {
-            fprintf(stderr, "Error opening file: %s\n", strerror(errno));
-            exit(EXIT_FAILURE);
-        }
-        
-        slow_interpreter_run_program(file);
-        
-        fclose(file);
+        slow_interpreter_run_program(filename);
     }
     
     if(app == APP_BFC) {

@@ -33,6 +33,6 @@
 
 #include <stdio.h>
 
-void slow_interpreter_run_program(FILE *f);
+void slow_interpreter_run_program(const char *filename);
 
 #endif

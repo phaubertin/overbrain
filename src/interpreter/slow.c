@@ -50,7 +50,14 @@ static struct {
 
 static unsigned char memory[MEMORY_SIZE];
 
-static void read_program(FILE *file) {
+static void read_program(const char *filename) {
+    FILE *file = fopen(filename, "r");
+
+    if(file == NULL) {
+        fprintf(stderr, "Error opening file: %s\n", strerror(errno));
+        exit(EXIT_FAILURE);
+    }
+        
     errno = 0;
     
     program.size = fread(program.bytes, 1, sizeof(program), file);
@@ -64,6 +71,8 @@ static void read_program(FILE *file) {
         fprintf(stderr, "Error: program is too long\n");
         exit(EXIT_FAILURE);
     }
+    
+    fclose(file);
 }
 
 static void check_end_of_program(int loop_level, int loop_start_position) {
@@ -176,7 +185,7 @@ static void run_program(void) {
     run_instructions(0);
 }
 
-void slow_interpreter_run_program(FILE *f) {
-    read_program(f);
+void slow_interpreter_run_program(const char *filename) {
+    read_program(filename);
     run_program();
 }
