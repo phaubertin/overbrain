@@ -38,8 +38,8 @@ clean:
 	make -C src clean
 	-rm -f examples/hello.c examples/hello
 
-.PHONY: interpret-hello
-interpret-hello: all
+.PHONY: slow-hello
+slow-hello: all
 	src/bf examples/hello.bf
 
 .PHONY: build-hello
