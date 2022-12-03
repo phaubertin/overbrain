@@ -79,6 +79,7 @@ static void set_defaults(struct options *options, enum app app) {
     } else {
         options->action = ACTION_TREE;
     }
+    options->optimization_level = 3;
 }
 
 int run_app(enum app app, int argc, char *argv[]) {
@@ -96,19 +97,20 @@ int run_app(enum app app, int argc, char *argv[]) {
     }
     
     struct node *program = read_program(options.filename);
-
-    struct node *optimized = run_optimizations(program);
     
-    /* From this point, we only need the optimized tree. */
-    node_free(program);
-    
-    if(options.action == ACTION_COMPILE) {
-        codegen_c_generate(stdout, optimized);
-    } else {
-        tree_interpreter_run_program(optimized);
+    if(options.optimization_level > 0) {
+        struct node *optimized = run_optimizations(program);
+        node_free(program);
+        program = optimized;
     }
     
-    node_free(optimized);
+    if(options.action == ACTION_COMPILE) {
+        codegen_c_generate(stdout, program);
+    } else {
+        tree_interpreter_run_program(program);
+    }
+    
+    node_free(program);
     
     return EXIT_SUCCESS;
 }

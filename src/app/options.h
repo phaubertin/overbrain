@@ -42,6 +42,7 @@ typedef enum {
 struct options {
     option_action action;
     const char *filename;
+    int optimization_level;
 };
 
 bool parse_options(struct options *options, int argc, char *argv[]);

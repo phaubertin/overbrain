@@ -40,6 +40,10 @@ typedef struct {
 
 typedef enum {
     OPTION_COMPILE,
+    OPTION_O0,
+    OPTION_O1,
+    OPTION_O2,
+    OPTION_O3,
     OPTION_SLOW,
     OPTION_TREE,
     OPTION_UNKNOWN
@@ -47,6 +51,10 @@ typedef enum {
 
 static const enum_value option_names[] = {
     {"-compile",    OPTION_COMPILE},
+    {"-O0",         OPTION_O0},
+    {"-O1",         OPTION_O1},
+    {"-O2",         OPTION_O2},
+    {"-O3",         OPTION_O3},
     {"-slow",       OPTION_SLOW},
     {"-tree",       OPTION_TREE},
     {NULL,          OPTION_UNKNOWN},
@@ -96,6 +104,18 @@ bool parse_options(struct options *options, int argc, char *argv[]) {
         switch(option) {
         case OPTION_COMPILE:
             options->action = ACTION_COMPILE;
+            break;
+        case OPTION_O0:
+            options->optimization_level = 0;
+            break;
+        case OPTION_O1:
+            options->optimization_level = 1;
+            break;
+        case OPTION_O2:
+            options->optimization_level = 2;
+            break;
+        case OPTION_O3:
+            options->optimization_level = 3;
             break;
         case OPTION_SLOW:
             options->action = ACTION_SLOW;
