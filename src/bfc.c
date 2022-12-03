@@ -28,58 +28,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
  
-#include <errno.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include "backend/codegen_c.h"
-#include "frontend/parser.h"
-#include "ir/node.h"
-#include "optimizations/optimizations.h"
-
-static struct node *read_program(const char *filename) {
-    FILE *file = fopen(filename, "r");
-    
-    if(file == NULL) {
-        fprintf(stderr, "Error opening file: %s\n", strerror(errno));
-        exit(EXIT_FAILURE);
-    }
-    
-    struct node *program = parse_program(file);
-    
-    fclose(file);
-    
-    return program;
-}
-
-static void usage(int argc, char *argv[]) {
-    const char *argv0;
-    
-    if(argc > 0) {
-        argv0 = argv[0];
-    } else {
-        argv0 = "bfc";
-    }
-    
-    fprintf(stderr, "USAGE: %s program_file\n", argv0);
-    exit(EXIT_FAILURE);
-}
+#include "app/app.h"
 
 int main(int argc, char *argv[]) {
-    if(argc != 2) {
-        usage(argc, argv);
-    }
-    
-    struct node *program = read_program(argv[1]);
-    
-    struct node *optimized = run_optimizations(program);
-    
-    /* From this point, we only need the optimized tree. */
-    node_free(program);
-    
-    codegen_c_generate(stdout, optimized);
-    
-    node_free(optimized);
-
-    return EXIT_SUCCESS;
+    return run_app(APP_BFC, argc, argv);
 }

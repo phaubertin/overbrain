@@ -31,16 +31,17 @@ include ../header.mk
 
 targets = bf bfc
 sources = \
+	app/app.c \
+	backend/codegen_c.c \
+	frontend/parser.c \
+	interpreter/slow.c \
 	ir/builder.c \
 	ir/node.c \
-	backend/codegen_c.c \
-	interpreter/slow.c \
 	optimizations/bound_checks.c \
 	optimizations/compute_offsets.c \
 	optimizations/dead_loops.c \
 	optimizations/optimizations.c \
-	optimizations/run_length.c \
-	frontend/parser.c
+	optimizations/run_length.c
 
 .PHONY: all
 all: $(targets)

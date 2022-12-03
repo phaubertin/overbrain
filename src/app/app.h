@@ -28,8 +28,14 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "app/app.h"
+#ifndef BFC_APP_H
+#define BFC_APP_H
 
-int main(int argc, char *argv[]) {
-    return run_app(APP_BF, argc, argv);
-}
+enum app {
+    APP_BF,
+    APP_BFC
+};
+
+int run_app(enum app app, int argc, char *argv[]);
+
+#endif
