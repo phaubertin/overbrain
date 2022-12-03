@@ -36,6 +36,7 @@ sources = \
 	backend/codegen_c.c \
 	frontend/parser.c \
 	interpreter/slow.c \
+	interpreter/tree.c \
 	ir/builder.c \
 	ir/node.c \
 	optimizations/bound_checks.c \

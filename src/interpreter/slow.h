@@ -28,10 +28,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef BFC_SLOW_H
-#define BFC_SLOW_H
-
-#include <stdio.h>
+#ifndef BFC_SLOW_INTERPRETER_H
+#define BFC_SLOW_INTERPRETER_H
 
 void slow_interpreter_run_program(const char *filename);
 

@@ -28,22 +28,11 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef BFC_OPTIONS_H
-#define BFC_OPTIONS_H
+#ifndef BFC_TREE_INTERPRETER_H
+#define BFC_TREE_INTERPRETER_H
 
-#include <stdbool.h>
+#include "../ir/node.h"
 
-typedef enum {
-    ACTION_COMPILE,
-    ACTION_SLOW,
-    ACTION_TREE
-} option_action;
-
-struct options {
-    option_action action;
-    const char *filename;
-};
-
-bool parse_options(struct options *options, int argc, char *argv[]);
+void tree_interpreter_run_program(const struct node *program);
 
 #endif

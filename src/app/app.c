@@ -38,6 +38,7 @@
 #include "../backend/codegen_c.h"
 #include "../frontend/parser.h"
 #include "../interpreter/slow.h"
+#include "../interpreter/tree.h"
 #include "../ir/node.h"
 #include "../optimizations/optimizations.h"
 
@@ -76,7 +77,7 @@ static void set_defaults(struct options *options, enum app app) {
     if(app == APP_BFC) {
         options->action = ACTION_COMPILE;
     } else {
-        options->action = ACTION_SLOW;
+        options->action = ACTION_TREE;
     }
 }
 
@@ -101,7 +102,11 @@ int run_app(enum app app, int argc, char *argv[]) {
     /* From this point, we only need the optimized tree. */
     node_free(program);
     
-    codegen_c_generate(stdout, optimized);
+    if(options.action == ACTION_COMPILE) {
+        codegen_c_generate(stdout, optimized);
+    } else {
+        tree_interpreter_run_program(optimized);
+    }
     
     node_free(optimized);
     

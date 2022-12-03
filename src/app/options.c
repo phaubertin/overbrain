@@ -41,12 +41,14 @@ typedef struct {
 typedef enum {
     OPTION_COMPILE,
     OPTION_SLOW,
+    OPTION_TREE,
     OPTION_UNKNOWN
 } option_name;
 
 static const enum_value option_names[] = {
     {"-compile",    OPTION_COMPILE},
     {"-slow",       OPTION_SLOW},
+    {"-tree",       OPTION_TREE},
     {NULL,          OPTION_UNKNOWN},
 };
 
@@ -97,6 +99,9 @@ bool parse_options(struct options *options, int argc, char *argv[]) {
             break;
         case OPTION_SLOW:
             options->action = ACTION_SLOW;
+            break;
+        case OPTION_TREE:
+            options->action = ACTION_TREE;
             break;
         case OPTION_UNKNOWN:
             fprintf(stderr, "Unknown argument: %s\n", arg);

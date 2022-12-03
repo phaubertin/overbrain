@@ -42,6 +42,10 @@ clean:
 slow-hello: all
 	src/bf -slow examples/hello.bf
 
+.PHONY: tree-hello
+tree-hello: all
+	src/bf -tree examples/hello.bf
+
 .PHONY: build-hello
 build-hello: examples/hello
 
