@@ -33,6 +33,6 @@
 
 #include "../ir/node.h"
 
-struct node *run_optimizations(struct node *node);
+struct node *run_optimizations(struct node *program, const struct options *options);
 
 #endif

@@ -43,6 +43,7 @@ struct options {
     option_action action;
     const char *filename;
     int optimization_level;
+    bool no_check;
 };
 
 bool parse_options(struct options *options, int argc, char *argv[]);

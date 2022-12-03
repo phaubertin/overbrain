@@ -98,19 +98,17 @@ int run_app(enum app app, int argc, char *argv[]) {
     
     struct node *program = read_program(options.filename);
     
-    if(options.optimization_level > 0) {
-        struct node *optimized = run_optimizations(program);
-        node_free(program);
-        program = optimized;
-    }
-    
-    if(options.action == ACTION_COMPILE) {
-        codegen_c_generate(stdout, program);
-    } else {
-        tree_interpreter_run_program(program);
-    }
+    struct node *optimized = run_optimizations(program, &options);
     
     node_free(program);
+    
+    if(options.action == ACTION_COMPILE) {
+        codegen_c_generate(stdout, optimized);
+    } else {
+        tree_interpreter_run_program(optimized);
+    }
+    
+    node_free(optimized);
     
     return EXIT_SUCCESS;
 }
