@@ -28,41 +28,11 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <errno.h> 
+#ifndef BFC_SLOW_H
+#define BFC_SLOW_H
+
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include "interpreter/slow.h"
 
-static void usage(int argc, char *argv[]) {
-    const char *argv0;
-    
-    if(argc > 0) {
-        argv0 = argv[0];
-    } else {
-        argv0 = "bf";
-    }
-    
-    fprintf(stderr, "USAGE: %s program_file\n", argv0);
-    exit(EXIT_FAILURE);
-}
+void slow_interpreter_run_program(FILE *f);
 
-int main(int argc, char *argv[]) {
-    if(argc != 2) {
-        usage(argc, argv);
-    }
-    
-    const char *filename = argv[1];
-    FILE *file = fopen(filename, "r");
-    
-    if(file == NULL) {
-        fprintf(stderr, "Error opening file: %s\n", strerror(errno));
-        exit(EXIT_FAILURE);
-    }
-    
-    slow_interpreter_run_program(file);
-    
-    fclose(file);
-
-    return EXIT_SUCCESS;
-}
+#endif

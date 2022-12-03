@@ -31,10 +31,10 @@ include ../header.mk
 
 targets = bf bfc
 sources = \
-	bfc.c \
 	ir/builder.c \
 	ir/node.c \
 	backend/codegen_c.c \
+	interpreter/slow.c \
 	optimizations/bound_checks.c \
 	optimizations/compute_offsets.c \
 	optimizations/dead_loops.c \
@@ -49,5 +49,5 @@ all: $(targets)
 clean:
 	-rm -f $(targets)
 
-bfc: $(sources)
-bf: bf.c
+bfc: bfc.c $(sources)
+bf: bf.c $(sources)
