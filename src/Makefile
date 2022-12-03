@@ -27,9 +27,9 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-include ../../header.mk
+include ../header.mk
 
-targets = bfc
+targets = bf bfc
 sources = \
 	bfc.c \
 	ir/builder.c \
@@ -50,3 +50,4 @@ clean:
 	-rm -f $(targets)
 
 bfc: $(sources)
+bf: bf.c

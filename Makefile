@@ -30,25 +30,17 @@
 include header.mk
 
 .PHONY: 
-all: bf bfc
-
-.PHONY: bf
-bf:
-	make -C src/bf
-
-.PHONY: bfc
-bfc:
-	make -C src/bfc
+all:
+	make -C src
 
 .PHONY: clean
 clean:
-	make -C src/bf clean
-	make -C src/bfc clean
+	make -C src clean
 	-rm -f examples/hello.c examples/hello
 
 .PHONY: interpret-hello
-interpret-hello: bf
-	src/bf/bf examples/hello.bf
+interpret-hello: all
+	src/bf examples/hello.bf
 
 .PHONY: build-hello
 build-hello: examples/hello
@@ -59,7 +51,7 @@ run-hello: examples/hello
 
 examples/hello: examples/hello.c
 
-examples/hello.c: examples/hello.bf bfc
+examples/hello.c: examples/hello.bf all
 
 %.c: %.bf
-	src/bfc/bfc $< > $@
+	src/bfc $< > $@
