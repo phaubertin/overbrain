@@ -76,7 +76,6 @@ static struct node *insert_bound_checks_recursive(
                 );
                 break;
             case NODE_RIGHT:
-                update_minmax(&offset, node->n);
                 builder_append_node(&fragment_builder, node_clone(node));
                 break;
             case NODE_ADD:
