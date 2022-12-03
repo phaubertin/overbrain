@@ -28,43 +28,11 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <stddef.h>
-#include "builder.h"
+#ifndef BFC_COMPUTE_OFFSETS_H
+#define BFC_COMPUTE_OFFSETS_H
 
-void builder_initialize_empty(struct builder *builder) {
-    builder->head = NULL;
-    builder->tail = NULL;
-}
+#include "../ir/node.h"
 
-void builder_append_node(struct builder *builder, struct node *node) {
-    node->next = NULL;
-    if(builder->tail == NULL) {
-        builder->head = node;
-        builder->tail = node;
-    } else {
-        builder->tail->next = node;
-        builder->tail = node;
-    }
-}
+struct node *compute_offsets(struct node *node);
 
-void builder_append_tree(struct builder *builder, struct node *node) {
-    struct node *first = node;
-    struct node *last = node;
-    
-    while(node != NULL) {
-        last = node;
-        node = node->next;
-    }
-    
-    if(builder->tail == NULL) {
-        builder->head = first;
-        builder->tail = last;
-    } else {
-        builder->tail->next = first;
-        builder->tail = last;
-    }
-}
-
-struct node *builder_get_first(const struct builder *builder) {
-    return builder->head;
-}
+#endif

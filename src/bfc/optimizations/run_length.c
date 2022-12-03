@@ -73,7 +73,7 @@ struct node *run_length_optimize(struct node *node) {
             
             /* Maybe we optimized the whole body away. */
             if(body != NULL) {
-                builder_append_node(&builder, node_new_loop(body));
+                builder_append_node(&builder, node_new_loop(body, 0));
             }
         }
             node = node->next;

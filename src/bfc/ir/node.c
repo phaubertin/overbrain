@@ -74,9 +74,23 @@ struct node *node_new_out(int offset) {
     return node;
 }
 
-struct node *node_new_loop(struct node *body) {
+struct node *node_new_loop(struct node *body, int offset) {
     struct node *node = node_new(NODE_LOOP);
     node->body = body;
+    node->offset = offset;
+    return node;
+}
+
+struct node *node_new_static_loop(struct node *body, int offset) {
+    struct node *node = node_new(NODE_STATIC_LOOP);
+    node->body = body;
+    node->offset = offset;
+    return node;
+}
+
+struct node *node_new_check_bounds(int offset) {
+    struct node *node = node_new(NODE_CHECK_BOUNDS);
+    node->offset = offset;
     return node;
 }
 
@@ -84,8 +98,9 @@ struct node *node_clone(struct node *node) {
     struct node *clone = node_new(node->type);
     
     clone->n = node->n;
+    clone->offset = node->offset;
     
-    if(node->type == NODE_LOOP) {
+    if(node->type == NODE_LOOP || node->type == NODE_STATIC_LOOP) {
         clone->body = node_clone_tree(node->body);
     }
     

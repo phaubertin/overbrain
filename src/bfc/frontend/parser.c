@@ -127,7 +127,7 @@ static struct node *parse_instructions(struct state *state, int loop_level, cons
                  * called instance of this function expects the '[' character to
                  * have been consumed. */
                 struct node *body = parse_instructions(state, loop_level + 1, &nested_start);
-                builder_append_node(&builder, node_new_loop(body));
+                builder_append_node(&builder, node_new_loop(body, 0));
             }
             break;
         case ']':

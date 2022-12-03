@@ -35,6 +35,8 @@ sources = \
 	ir/builder.c \
 	ir/node.c \
 	backend/codegen_c.c \
+	optimizations/bound_checks.c \
+	optimizations/compute_offsets.c \
 	optimizations/dead_loops.c \
 	optimizations/optimizations.c \
 	optimizations/run_length.c \

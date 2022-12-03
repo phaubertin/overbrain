@@ -28,6 +28,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
  
+#include "bound_checks.h"
+#include "compute_offsets.h"
 #include "dead_loops.h"
 #include "optimizations.h"
 #include "run_length.h"
@@ -42,6 +44,14 @@ struct node *run_optimizations(struct node *node) {
     struct node *no_dead_loops = remove_dead_loops(run_length);
     
     node_free(run_length);
+    
+    struct node *with_offsets = compute_offsets(no_dead_loops);
+    
+    node_free(no_dead_loops);
+    
+    struct node *with_checks = insert_bound_checks(with_offsets);
+    
+    node_free(with_offsets);
      
-    return no_dead_loops;
+    return with_checks;
 }

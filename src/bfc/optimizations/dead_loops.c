@@ -63,7 +63,7 @@ struct node *remove_dead_loops_recursive(struct node *node, int level) {
                 struct node *body = remove_dead_loops_recursive(node->body, level + 1);
                 
                 if(body != NULL) {
-                    builder_append_node(&builder, node_new_loop(body));
+                    builder_append_node(&builder, node_new_loop(body, 0));
                 }
             }
             /* On exiting a loop, the current cell is known to be zero. */

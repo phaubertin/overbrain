@@ -42,6 +42,8 @@ void builder_initialize_empty(struct builder *builder);
 
 void builder_append_node(struct builder *builder, struct node *node);
 
+void builder_append_tree(struct builder *builder, struct node *node);
+
 struct node *builder_get_first(const struct builder *builder);
 
 #endif
