@@ -29,6 +29,7 @@
  */
 
 #include <stddef.h>
+#include <stdio.h>
 #include <string.h>
 #include "options.h"
 
@@ -59,6 +60,16 @@ int parse_enum_value(const char *name, const enum_value *values) {
     return current->value;
 }
 
+static int parse_option_name(const char *arg) {
+    /* Allow either single or double dash for options. However, do not adjust
+     * if the whole argument is two dashes (--). */
+    if(strlen(arg) > 2 && arg[1] == '-') {
+        ++arg;
+    }
+    
+    return parse_enum_value(arg, option_names);
+}
+
 bool parse_options(struct options *options, int argc, char *argv[]) {
     if(argc < 2) {
         return false;
@@ -78,7 +89,7 @@ bool parse_options(struct options *options, int argc, char *argv[]) {
             break;
         }
         
-        int option = parse_enum_value(arg, option_names);
+        int option = parse_option_name(arg);
         
         switch(option) {
         case OPTION_COMPILE:
@@ -88,6 +99,7 @@ bool parse_options(struct options *options, int argc, char *argv[]) {
             options->action = ACTION_SLOW;
             break;
         case OPTION_UNKNOWN:
+            fprintf(stderr, "Unknown argument: %s\n", arg);
             return false;
         }
         
