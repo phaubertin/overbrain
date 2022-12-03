@@ -28,11 +28,13 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <errno.h> 
+#include <errno.h>
+#include <libgen.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "app.h"
+#include "options.h"
 #include "../backend/codegen_c.h"
 #include "../frontend/parser.h"
 #include "../interpreter/slow.h"
@@ -58,40 +60,50 @@ static void usage(enum app app, int argc, char *argv[]) {
     const char *argv0;
     
     if(argc > 0) {
-        argv0 = argv[0];
+        argv0 = basename(argv[0]);
     } else if (app == APP_BFC) {
         argv0 = "bfc";
     } else {
         argv0 = "bf";
     }
-    
-    fprintf(stderr, "USAGE: %s program_file\n", argv0);
+
+    /* TODO update usage message with options */
+    fprintf(stderr, "USAGE: %s [options ...] program_file\n", argv0);
     exit(EXIT_FAILURE);
 }
 
+static void set_defaults(struct options *options, enum app app) {
+    if(app == APP_BFC) {
+        options->action = ACTION_COMPILE;
+    } else {
+        options->action = ACTION_SLOW;
+    }
+}
+
 int run_app(enum app app, int argc, char *argv[]) {
-    if(argc != 2) {
+    struct options options;
+    
+    set_defaults(&options, app);
+    
+    if(! parse_options(&options, argc, argv)) {
         usage(app, argc, argv);
     }
     
-    const char *filename = argv[1];
-    
-    if(app == APP_BF) {
-        slow_interpreter_run_program(filename);
+    if(options.action == ACTION_SLOW) {
+        slow_interpreter_run_program(options.filename);
+        return EXIT_SUCCESS;
     }
     
-    if(app == APP_BFC) {
-        struct node *program = read_program(argv[1]);
+    struct node *program = read_program(options.filename);
+
+    struct node *optimized = run_optimizations(program);
     
-        struct node *optimized = run_optimizations(program);
-        
-        /* From this point, we only need the optimized tree. */
-        node_free(program);
-        
-        codegen_c_generate(stdout, optimized);
-        
-        node_free(optimized);
-    }
+    /* From this point, we only need the optimized tree. */
+    node_free(program);
+    
+    codegen_c_generate(stdout, optimized);
+    
+    node_free(optimized);
     
     return EXIT_SUCCESS;
 }
