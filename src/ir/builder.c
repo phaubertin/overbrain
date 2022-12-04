@@ -48,6 +48,11 @@ void builder_append_node(struct builder *builder, struct node *node) {
 }
 
 void builder_append_tree(struct builder *builder, struct node *node) {
+    if(node == NULL) {
+        /* empty tree */
+        return;
+    }
+    
     struct node *first = node;
     struct node *last = node;
     
