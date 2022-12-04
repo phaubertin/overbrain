@@ -55,18 +55,22 @@ static struct node *insert_bound_checks_recursive(
     struct builder builder;
     builder_initialize_empty(&builder);
     
+    int base_offset = loop_offset;
+    
     while(node != NULL) {
         struct builder fragment_builder;
         builder_initialize_empty(&fragment_builder);
     
-        struct minmax offset;
-        offset.min = 0;
-        offset.max = 0;
+        struct minmax access_offset;
+        access_offset.min = base_offset;
+        access_offset.max = base_offset;
+        
+        int shift_offset = 0;
         
         while(node != NULL && node->type != NODE_LOOP) {
             switch(node->type) {
             case NODE_STATIC_LOOP:
-                update_minmax(&offset, node->offset);
+                update_minmax(&access_offset, node->offset + shift_offset);
                 builder_append_node(
                     &fragment_builder,
                     node_new_static_loop(
@@ -76,12 +80,13 @@ static struct node *insert_bound_checks_recursive(
                 );
                 break;
             case NODE_RIGHT:
+                shift_offset += node->n;
                 builder_append_node(&fragment_builder, node_clone(node));
                 break;
             case NODE_ADD:
             case NODE_IN:
             case NODE_OUT:
-                update_minmax(&offset, node->offset);
+                update_minmax(&access_offset, node->offset + shift_offset);
                 builder_append_node(&fragment_builder, node_clone(node));
                 break;
             case NODE_LOOP:
@@ -94,27 +99,32 @@ static struct node *insert_bound_checks_recursive(
         }
         
         if(node == NULL) {
-            update_minmax(&offset, loop_offset);
+            update_minmax(&access_offset, loop_offset + shift_offset);
         } else {
             /* loop node */
-            update_minmax(&offset, node->offset);
+            update_minmax(&access_offset, node->offset + shift_offset);
+        }
+        
+        if(access_offset.max > base_offset) {
+            builder_append_node(&builder, node_new_check_right(access_offset.max));
+        }
+        if(access_offset.min < base_offset) {
+            builder_append_node(&builder, node_new_check_left(access_offset.min));
+        }
+        
+        builder_append_tree(&builder, builder_get_first(&fragment_builder));
+        
+        if(node != NULL) {
             builder_append_node(
-                &fragment_builder,
+                &builder,
                 node_new_loop(
                     insert_bound_checks_recursive(node->body, loop_level + 1, node->offset),
                     node->offset
                 )
             );
+            base_offset = node->offset;
             node = node->next;
         }
-        
-        if(offset.min < 0) {
-            builder_append_node(&builder, node_new_check_right(offset.min));
-        }
-        if(offset.max > 0) {
-            builder_append_node(&builder, node_new_check_left(offset.max));
-        }
-        builder_append_tree(&builder, builder_get_first(&fragment_builder));
     }
     
     return builder_get_first(&builder);
