@@ -88,15 +88,13 @@ static void run_body(const struct node *node) {
         case NODE_STATIC_LOOP:
             run_loop(node->body, node->offset);
             break;
-        case NODE_CHECK_BOUNDS:
-            if(node->offset > 0) {
-                if(state.ptr + node->offset > MEMORY_SIZE) {
-                    fail_too_far_right();
-                }
-            } else if(node->offset != 0) {
-                if(state.ptr + node->offset < 0) {
-                    fail_too_far_left();
-                }
+        case NODE_CHECK_RIGHT:
+            if(state.ptr + node->offset > MEMORY_SIZE) {
+                fail_too_far_right();
+            }
+        case NODE_CHECK_LEFT:
+            if(state.ptr + node->offset < 0) {
+                fail_too_far_left();
             }
             break;
         }

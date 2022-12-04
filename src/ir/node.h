@@ -50,8 +50,10 @@ typedef enum {
     NODE_LOOP,
     /* a loop that does not modify the data pointer */
     NODE_STATIC_LOOP,
-    /* a check that the data pointer is still within bounds */
-    NODE_CHECK_BOUNDS,
+    /* a check that the data pointer is still within upper bound */
+    NODE_CHECK_RIGHT,
+    /* a check that the data pointer is still within lower bound (i.e. 0) */
+    NODE_CHECK_LEFT,
 } node_type;
 
 struct node {
@@ -79,7 +81,9 @@ struct node *node_new_loop(struct node *body, int offset);
 
 struct node *node_new_static_loop(struct node *body, int offset);
 
-struct node *node_new_check_bounds(int offset);
+struct node *node_new_check_right(int offset);
+
+struct node *node_new_check_left(int offset);
 
 struct node *node_clone(struct node *node);
 

@@ -88,8 +88,14 @@ struct node *node_new_static_loop(struct node *body, int offset) {
     return node;
 }
 
-struct node *node_new_check_bounds(int offset) {
-    struct node *node = node_new(NODE_CHECK_BOUNDS);
+struct node *node_new_check_right(int offset) {
+    struct node *node = node_new(NODE_CHECK_RIGHT);
+    node->offset = offset;
+    return node;
+}
+
+struct node *node_new_check_left(int offset) {
+    struct node *node = node_new(NODE_CHECK_LEFT);
     node->offset = offset;
     return node;
 }

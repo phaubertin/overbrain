@@ -46,17 +46,14 @@ static void initialize_state(struct state *state, FILE *f) {
     state->f = f;
 }
 
-static bool has_positive_bound_check(const struct node *node) {
+static bool has_right_bound_check(const struct node *node) {
     while(node != NULL) {
         switch(node->type) {
-        case NODE_CHECK_BOUNDS:
-            if(node->offset > 0) {
-                return true;
-            }
-            break;
+        case NODE_CHECK_RIGHT:
+            return true;
         case NODE_LOOP:
         case NODE_STATIC_LOOP:
-            if(has_positive_bound_check(node->body)) {
+            if(has_right_bound_check(node->body)) {
                 return true;
             }
             break;
@@ -69,7 +66,7 @@ static bool has_positive_bound_check(const struct node *node) {
 }
 
 static void emit_fail_too_far_right_decl(struct state *state, const struct node *root) {
-    if(! has_positive_bound_check(root)) {
+    if(! has_right_bound_check(root)) {
         return;
     }
     
@@ -82,17 +79,14 @@ static void emit_fail_too_far_right_decl(struct state *state, const struct node 
     fprintf(state->f, "\n");
 }
 
-static bool has_negative_bound_check(const struct node *node) {
+static bool has_left_bound_check(const struct node *node) {
     while(node != NULL) {
         switch(node->type) {
-        case NODE_CHECK_BOUNDS:
-            if(node->offset < 0) {
-                return true;
-            }
-            break;
+        case NODE_CHECK_LEFT:
+            return true;
         case NODE_LOOP:
         case NODE_STATIC_LOOP:
-            if(has_negative_bound_check(node->body)) {
+            if(has_left_bound_check(node->body)) {
                 return true;
             }
             break;
@@ -105,7 +99,7 @@ static bool has_negative_bound_check(const struct node *node) {
 }
 
 static void emit_fail_too_far_left_decl(struct state *state, const struct node *root) {
-    if(! has_negative_bound_check(root)) {
+    if(! has_left_bound_check(root)) {
         return;
     }
     
@@ -204,26 +198,22 @@ static void emit_node_loop(struct state *state, const struct node *node, int loo
     fprintf(state->f, INDENTFMT "}\n", INDENTARGS(loop_level + 1));
 }
 
-static void emit_node_check_bounds(struct state *state, const struct node *node, int loop_level) {
-    if(node->offset == 0) {
-        return;
-    }
+static void emit_node_check_right(struct state *state, const struct node *node, int loop_level) {
+    fprintf(state->f, INDENTFMT "/* check right bound for offset %d */\n", INDENTARGS(loop_level + 1), node->offset);
+    fprintf(state->f, INDENTFMT "if(p + %d > sizeof(m)) {\n", INDENTARGS(loop_level + 1), node->offset);
     
-    fprintf(state->f, INDENTFMT "/* check bounds for offset %d */\n", INDENTARGS(loop_level + 1), node->offset);
+    fprintf(state->f, INDENTFMT "fail_too_far_right();\n", INDENTARGS(loop_level + 2));
     
-    if(node->offset > 0) {
-        fprintf(state->f, INDENTFMT "if(p + %d > sizeof(m)) {\n", INDENTARGS(loop_level + 1), node->offset);
-        
-        fprintf(state->f, INDENTFMT "fail_too_far_right();\n", INDENTARGS(loop_level + 2));
-        
-        fprintf(state->f, INDENTFMT "}\n", INDENTARGS(loop_level + 1));
-    } else {
-        fprintf(state->f, INDENTFMT "if(p + %d < 0) {\n", INDENTARGS(loop_level + 1), node->offset);
-        
-        fprintf(state->f, INDENTFMT "fail_too_far_left();\n", INDENTARGS(loop_level + 2));
-        
-        fprintf(state->f, INDENTFMT "}\n", INDENTARGS(loop_level + 1));
-    }
+    fprintf(state->f, INDENTFMT "}\n", INDENTARGS(loop_level + 1));
+}
+
+static void emit_node_check_left(struct state *state, const struct node *node, int loop_level) {
+    fprintf(state->f, INDENTFMT "/* check right bound for offset %d */\n", INDENTARGS(loop_level + 1), node->offset);
+    fprintf(state->f, INDENTFMT "if(p + %d < 0) {\n", INDENTARGS(loop_level + 1), node->offset);
+    
+    fprintf(state->f, INDENTFMT "fail_too_far_left();\n", INDENTARGS(loop_level + 2));
+    
+    fprintf(state->f, INDENTFMT "}\n", INDENTARGS(loop_level + 1));
 }
 
 static void emit_input_decl(struct state *state, const struct node *node, int loop_level) {
@@ -265,8 +255,11 @@ static void generate_code(struct state *state, const struct node *node, int loop
             emit_comment(state, "static loop", loop_level);
             emit_node_loop(state, node, loop_level);
             break;
-        case NODE_CHECK_BOUNDS:
-            emit_node_check_bounds(state, node, loop_level);
+        case NODE_CHECK_RIGHT:
+            emit_node_check_right(state, node, loop_level);
+            break;
+        case NODE_CHECK_LEFT:
+            emit_node_check_left(state, node, loop_level);
             break;
         }
         node = node->next;

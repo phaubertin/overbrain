@@ -90,7 +90,8 @@ static struct node *compute_offsets_in_body(
             );
             break;
         case NODE_STATIC_LOOP:
-        case NODE_CHECK_BOUNDS:
+        case NODE_CHECK_RIGHT:
+        case NODE_CHECK_LEFT:
             /* none of these exist yet */
             break;
         }

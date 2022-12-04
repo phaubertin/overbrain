@@ -85,7 +85,8 @@ static struct node *insert_bound_checks_recursive(
                 builder_append_node(&fragment_builder, node_clone(node));
                 break;
             case NODE_LOOP:
-            case NODE_CHECK_BOUNDS:
+            case NODE_CHECK_RIGHT:
+            case NODE_CHECK_LEFT:
                 break;
             }
             
@@ -108,10 +109,10 @@ static struct node *insert_bound_checks_recursive(
         }
         
         if(offset.min < 0) {
-            builder_append_node(&builder, node_new_check_bounds(offset.min));
+            builder_append_node(&builder, node_new_check_right(offset.min));
         }
         if(offset.max > 0) {
-            builder_append_node(&builder, node_new_check_bounds(offset.max));
+            builder_append_node(&builder, node_new_check_left(offset.max));
         }
         builder_append_tree(&builder, builder_get_first(&fragment_builder));
     }
