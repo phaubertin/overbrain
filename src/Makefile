@@ -33,7 +33,7 @@ targets = bf bfc
 sources = \
 	app/app.c \
 	app/options.c \
-	backend/codegen_c.c \
+	backend/c.c \
 	frontend/parser.c \
 	interpreter/slow.c \
 	interpreter/tree.c \

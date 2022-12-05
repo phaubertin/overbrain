@@ -29,7 +29,7 @@
  */
 
 #include <stdbool.h>
-#include "codegen_c.h"
+#include "c.h"
 
 static int indentation_width(int indentation_level) {
     return 4 * indentation_level;
@@ -271,7 +271,7 @@ static void generate_footer(struct state *state) {
     fprintf(state->f, "}\n");
 }
 
-void codegen_c_generate(FILE *f, const struct node *root) {
+void c_generate(FILE *f, const struct node *root) {
     struct state state;
     initialize_state(&state, f);
     generate_header(&state, root);

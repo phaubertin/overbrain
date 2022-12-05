@@ -35,7 +35,7 @@
 #include <string.h>
 #include "app.h"
 #include "options.h"
-#include "../backend/codegen_c.h"
+#include "../backend/c.h"
 #include "../frontend/parser.h"
 #include "../interpreter/slow.h"
 #include "../interpreter/tree.h"
@@ -103,7 +103,7 @@ int run_app(enum app app, int argc, char *argv[]) {
     node_free(program);
     
     if(options.action == ACTION_COMPILE) {
-        codegen_c_generate(stdout, optimized);
+        c_generate(stdout, optimized);
     } else {
         tree_interpreter_run_program(optimized);
     }

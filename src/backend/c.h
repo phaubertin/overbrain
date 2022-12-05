@@ -34,6 +34,6 @@
 #include <stdio.h>
 #include "../ir/node.h"
 
-void codegen_c_generate(FILE *f, const struct node *root);
+void c_generate(FILE *f, const struct node *root);
 
 #endif
