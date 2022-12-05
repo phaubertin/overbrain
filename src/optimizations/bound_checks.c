@@ -47,6 +47,42 @@ static void update_minmax(struct minmax *minmax, int value) {
     }
 }
 
+static void get_static_loop_body_offsets(
+    struct minmax *access_offset,
+    struct node *node,
+    int loop_offset
+) {
+    access_offset->min = loop_offset;
+    access_offset->max = loop_offset;
+    
+    struct minmax child_offset;
+    
+    while(node != NULL) {
+        switch(node->type) {
+        case NODE_STATIC_LOOP:
+            get_static_loop_body_offsets(&child_offset, node->body, node->offset);
+            update_minmax(access_offset, child_offset.min);
+            update_minmax(access_offset, child_offset.max);
+            break;
+        case NODE_ADD:
+        case NODE_IN:
+        case NODE_OUT:
+            update_minmax(access_offset, node->offset);
+            break;
+        case NODE_RIGHT:
+        case NODE_LOOP:
+            /* a static loop cannot contain either of these */
+            break;
+        case NODE_CHECK_RIGHT:
+        case NODE_CHECK_LEFT:
+            /* these haven't been inserted yet */
+            break;
+        }
+
+        node = node->next;
+    }
+}
+
 static struct node *insert_bound_checks_recursive(
     struct node *node,
     int loop_level,
@@ -65,19 +101,17 @@ static struct node *insert_bound_checks_recursive(
         access_offset.min = base_offset;
         access_offset.max = base_offset;
         
+        struct minmax child_offset;
+        
         int shift_offset = 0;
         
         while(node != NULL && node->type != NODE_LOOP) {
             switch(node->type) {
             case NODE_STATIC_LOOP:
-                update_minmax(&access_offset, node->offset + shift_offset);
-                builder_append_node(
-                    &fragment_builder,
-                    node_new_static_loop(
-                        insert_bound_checks_recursive(node->body, loop_level + 1, node->offset),
-                        node->offset
-                    )
-                );
+                builder_append_node(&fragment_builder, node_clone(node));
+                get_static_loop_body_offsets(&child_offset, node->body, node->offset);
+                update_minmax(&access_offset, child_offset.min + shift_offset);
+                update_minmax(&access_offset, child_offset.max + shift_offset);
                 break;
             case NODE_RIGHT:
                 shift_offset += node->n;

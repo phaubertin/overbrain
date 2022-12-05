@@ -107,7 +107,6 @@ static bool loop_body_is_static(struct node *node) {
         switch(node->type) {
         case NODE_RIGHT:
         case NODE_LOOP:
-        case NODE_IN:
             return false;
         default:
             break;
