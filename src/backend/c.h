@@ -28,8 +28,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef BFC_CODEGEN_C_H
-#define BFC_CODEGEN_C_H
+#ifndef BFC_BACKEND_C_H
+#define BFC_BACKEND_C_H
 
 #include <stdio.h>
 #include "../ir/node.h"

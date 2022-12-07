@@ -28,8 +28,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef BFC_BUILDER_H
-#define BFC_BUILDER_H
+#ifndef BFC_IR_BUILDER_H
+#define BFC_IR_BUILDER_H
 
 #include "node.h"
 

@@ -28,8 +28,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef BFC_CODEGEN_NASM_H
-#define BFC_CODEGEN_NASM_H
+#ifndef BFC_BACKEND_NASM_H
+#define BFC_BACKEND_NASM_H
 
 #include <stdio.h>
 #include "../ir/node.h"

@@ -28,8 +28,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef BFC_NODE_H
-#define BFC_NODE_H
+#ifndef BFC_IR_NODE_H
+#define BFC_IR_NODE_H
 
 typedef enum {
     /* add a possibly negative value n to current memory cell:
