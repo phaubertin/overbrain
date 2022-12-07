@@ -29,6 +29,7 @@
  */
 
 #include <stdbool.h>
+#include "../ir/query.h"
 #include "nasm.h"
 
 #define INDENT "    "
@@ -50,27 +51,8 @@ static void initialize_state(struct state *state, FILE *f) {
     state->label = 0;
 }
 
-static bool has_right_bound_check(const struct node *node) {
-    while(node != NULL) {
-        switch(node->type) {
-        case NODE_CHECK_RIGHT:
-            return true;
-        case NODE_LOOP:
-        case NODE_STATIC_LOOP:
-            if(has_right_bound_check(node->body)) {
-                return true;
-            }
-            break;
-        default:
-            break;
-        }
-        node = node->next;
-    }
-    return false;
-}
-
 static void emit_fail_too_far_right_decl(struct state *state, const struct node *root) {
-    if(! has_right_bound_check(root)) {
+    if(! tree_has_node_type(root, NODE_CHECK_RIGHT)) {
         return;
     }
     
@@ -86,27 +68,8 @@ static void emit_fail_too_far_right_decl(struct state *state, const struct node 
     fprintf(state->f, "\n");
 }
 
-static bool has_left_bound_check(const struct node *node) {
-    while(node != NULL) {
-        switch(node->type) {
-        case NODE_CHECK_LEFT:
-            return true;
-        case NODE_LOOP:
-        case NODE_STATIC_LOOP:
-            if(has_left_bound_check(node->body)) {
-                return true;
-            }
-            break;
-        default:
-            break;
-        }
-        node = node->next;
-    }
-    return false;
-}
-
 static void emit_fail_too_far_left_decl(struct state *state, const struct node *root) {
-    if(! has_left_bound_check(root)) {
+    if(! tree_has_node_type(root, NODE_CHECK_LEFT)) {
         return;
     }
     
@@ -122,23 +85,8 @@ static void emit_fail_too_far_left_decl(struct state *state, const struct node *
     fprintf(state->f, "\n");
 }
 
-static bool has_in_node(const struct node *node) {
-    while(node != NULL) {
-        if(node->type == NODE_IN) {
-            return true;
-        }
-        
-        if(node->type == NODE_LOOP && has_in_node(node->body)) {
-            return true;
-        }
-        
-        node = node->next;
-    }
-    return false;
-}
-
 static void emit_check_input_decl(struct state *state, const struct node *root) {
-    if(! has_in_node(root)) {
+    if(! tree_has_node_type(root, NODE_IN)) {
         return;
     }
     
@@ -201,15 +149,15 @@ static void generate_header(struct state *state, const struct node *root) {
     fprintf(state->f, INDENT "db \"r\", 0\n");
     fprintf(state->f, "w:\n");
     fprintf(state->f, INDENT "db \"w\", 0\n");
-    if(has_right_bound_check(root)) {
+    if(tree_has_node_type(root, NODE_CHECK_RIGHT)) {
         fprintf(state->f, "msg_right:\n");
         fprintf(state->f, INDENT "db \"Error: memory position out of bounds (overflow - too far right)\", 10, 0\n");
     }
-    if(has_left_bound_check(root)) {
+    if(tree_has_node_type(root, NODE_CHECK_LEFT)) {
         fprintf(state->f, "msg_left:\n");
         fprintf(state->f, INDENT "db \"Error: memory position out of bounds (underflow - too far left)\", 10, 0\n");
     }
-    if(has_in_node(root)) {
+    if(tree_has_node_type(root, NODE_IN)) {
         /* no end of line for this one because we are calling ferror() instead of fprintf() */
         fprintf(state->f, "msg_ferr:\n");
         fprintf(state->f, INDENT "db \"Error when reading input\", 0\n");

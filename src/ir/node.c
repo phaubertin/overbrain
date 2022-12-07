@@ -33,6 +33,7 @@
 #include <string.h>
 #include "builder.h"
 #include "node.h"
+#include "query.h"
 
 static struct node *node_new(node_type type) {
     struct node *node = malloc(sizeof(struct node));
@@ -106,7 +107,7 @@ struct node *node_clone(struct node *node) {
     clone->n = node->n;
     clone->offset = node->offset;
     
-    if(node->type == NODE_LOOP || node->type == NODE_STATIC_LOOP) {
+    if(node_is_loop(node)) {
         clone->body = node_clone_tree(node->body);
     }
     
@@ -129,7 +130,7 @@ struct node *node_clone_tree(struct node *root) {
 
 void node_free(struct node *node) {
     while(node != NULL) {
-        if(node->type == NODE_LOOP) {
+        if(node_is_loop(node)) {
             node_free(node->body);
         }
         

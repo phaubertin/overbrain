@@ -41,6 +41,7 @@ sources = \
 	interpreter/tree.c \
 	ir/builder.c \
 	ir/node.c \
+	ir/query.c \
 	optimizations/bound_checks.c \
 	optimizations/compute_offsets.c \
 	optimizations/dead_loops.c \
