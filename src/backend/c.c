@@ -208,7 +208,7 @@ static void emit_node_check_right(struct state *state, const struct node *node, 
 }
 
 static void emit_node_check_left(struct state *state, const struct node *node, int loop_level) {
-    fprintf(state->f, INDENTFMT "/* check right bound for offset %d */\n", INDENTARGS(loop_level + 1), node->offset);
+    fprintf(state->f, INDENTFMT "/* check left bound for offset %d */\n", INDENTARGS(loop_level + 1), node->offset);
     fprintf(state->f, INDENTFMT "if(p + %d < 0) {\n", INDENTARGS(loop_level + 1), node->offset);
     
     fprintf(state->f, INDENTFMT "fail_too_far_left();\n", INDENTARGS(loop_level + 2));

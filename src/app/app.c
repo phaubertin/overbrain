@@ -35,7 +35,7 @@
 #include <string.h>
 #include "app.h"
 #include "options.h"
-#include "../backend/c.h"
+#include "../backend/backend.h"
 #include "../frontend/parser.h"
 #include "../interpreter/slow.h"
 #include "../interpreter/tree.h"
@@ -80,6 +80,7 @@ static void set_defaults(struct options *options, enum app app) {
         options->action = ACTION_TREE;
     }
     options->optimization_level = 3;
+    options->backend = BACKEND_C;
 }
 
 int run_app(enum app app, int argc, char *argv[]) {
@@ -103,7 +104,7 @@ int run_app(enum app app, int argc, char *argv[]) {
     node_free(program);
     
     if(options.action == ACTION_COMPILE) {
-        c_generate(stdout, optimized);
+        backend_generate(stdout, optimized, &options);
     } else {
         tree_interpreter_run_program(optimized);
     }

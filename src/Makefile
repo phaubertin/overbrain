@@ -33,7 +33,9 @@ targets = bf bfc
 sources = \
 	app/app.c \
 	app/options.c \
+	backend/backend.c \
 	backend/c.c \
+	backend/nasm.c \
 	frontend/parser.c \
 	interpreter/slow.c \
 	interpreter/tree.c \

@@ -39,6 +39,7 @@ typedef struct {
 } enum_value;
 
 typedef enum {
+    OPTION_BACKEND,
     OPTION_COMPILE,
     OPTION_NO_CHECK,
     OPTION_O0,
@@ -51,6 +52,7 @@ typedef enum {
 } option_name;
 
 static const enum_value option_names[] = {
+    {"-backend",    OPTION_BACKEND},
     {"-compile",    OPTION_COMPILE},
     {"-no-check",   OPTION_NO_CHECK},
     {"-O0",         OPTION_O0},
@@ -60,6 +62,12 @@ static const enum_value option_names[] = {
     {"-slow",       OPTION_SLOW},
     {"-tree",       OPTION_TREE},
     {NULL,          OPTION_UNKNOWN},
+};
+
+static const enum_value backend_names[] = {
+    {"c",           BACKEND_C},
+    {"nasm",        BACKEND_NASM},
+    {NULL,          BACKEND_UKNOWN},
 };
 
 int parse_enum_value(const char *name, const enum_value *values) {
@@ -106,6 +114,22 @@ bool parse_options(struct options *options, int argc, char *argv[]) {
         int option = parse_option_name(arg);
         
         switch(option) {
+        case OPTION_BACKEND:
+            ++index;
+            
+            if(index >= argc) {
+                fprintf(stderr, "Empty -backend argument\n");
+                return false;
+            }
+            
+            options->backend = parse_enum_value(argv[index], backend_names);
+            
+            
+            if(options->backend == BACKEND_UKNOWN) {
+                fprintf(stderr, "Unknown backend '%s'\n", argv[index]);
+                return false;
+            }
+            break;
         case OPTION_COMPILE:
             options->action = ACTION_COMPILE;
             break;
