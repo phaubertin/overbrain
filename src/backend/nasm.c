@@ -29,17 +29,21 @@
  */
 
 #include <stdbool.h>
+#include <stdlib.h>
 #include "../ir/query.h"
+#include "codegen.h"
 #include "nasm.h"
+#include "symbols.h"
+#include "x86.h"
 
 #define INDENT "    "
-
-#define LABEL_FMT ".l%08d"
 
 #define REGM "rbx"
 #define REGP "r13"
 #define REGTEMP "rax"
 #define REGTEMP8 "al"
+
+#define OPERAND_BUFFER_SIZE 32
 
 struct state {
     FILE *f;
@@ -108,109 +112,268 @@ static void generate_header(struct state *state, const struct node *root) {
     fprintf(state->f, "\n");
 }
 
-static void emit_node_add(struct state *state, const struct node *node) {
-    fprintf(state->f, INDENT "add byte [" REGM " + " REGP " + %d], %d\n", node->offset, node->n);
+static size_t format_operand_extern(char *buf, size_t bufsize, const struct x86_operand *operand) {
+    return snprintf(buf, bufsize, "%s", extern_symbol_names[operand->n]);
 }
 
-static void emit_node_right(struct state *state, const struct node *node) {
-    fprintf(state->f, INDENT "add " REGP ", %d\n", node->n);
+static size_t format_operand_imm8(char *buf, size_t bufsize, const struct x86_operand *operand) {
+    return snprintf(buf, bufsize, "%d", operand->n);
 }
 
-static void emit_node_in(struct state *state, const struct node *node) {
-    fprintf(state->f, INDENT "mov rdi, qword [stdin]\n");
-    fprintf(state->f, INDENT "call fgetc\n");
-    fprintf(state->f, "\n");
-    fprintf(state->f, INDENT "mov byte [" REGM " + " REGP " + %d], al\n", node->offset);
-    fprintf(state->f, INDENT "mov rdi, rax\n");
-    fprintf(state->f, INDENT "call check_input\n");
+static size_t format_operand_imm64(char *buf, size_t bufsize, const struct x86_operand *operand) {
+    return snprintf(buf, bufsize, "%d", operand->n);
+}
+
+static size_t format_operand_label(char *buf, size_t bufsize, const struct x86_operand *operand) {
+    return snprintf(buf, bufsize, ".l%08d", operand->n);
+}
+
+static size_t format_operand_local(char *buf, size_t bufsize, const struct x86_operand *operand) {
+    return snprintf(buf, bufsize, "%s", local_symbol_names[operand->n]);
+}
+
+static size_t format_operand_mem8_imm(char *buf, size_t bufsize, const struct x86_operand *operand) {
+    return snprintf(buf, bufsize, "byte [%d]", operand->n);
+}
+
+static size_t format_operand_mem8_reg(char *buf, size_t bufsize, const struct x86_operand *operand) {
+    return snprintf(buf, bufsize, "byte [%s + %s + %d]", x86_reg64_names[operand->r1], x86_reg64_names[operand->r2], operand->n);
+}
+
+static size_t format_operand_mem64_extern(char *buf, size_t bufsize, const struct x86_operand *operand) {
+    return snprintf(buf, bufsize, "qword [%s]", extern_symbol_names[operand->n]);
+}
+
+static size_t format_operand_reg8(char *buf, size_t bufsize, const struct x86_operand *operand) {
+    return snprintf(buf, bufsize, "%s", x86_reg8_names[operand->r1]);
+}
+
+static size_t format_operand_reg32(char *buf, size_t bufsize, const struct x86_operand *operand) {
+    return snprintf(buf, bufsize, "%s", x86_reg32_names[operand->r1]);
+}
+
+static size_t format_operand_reg64(char *buf, size_t bufsize, const struct x86_operand *operand) {
+    return snprintf(buf, bufsize, "%s", x86_reg64_names[operand->r1]);
+}
+
+static void format_operand(char *buf, size_t bufsize, const struct x86_operand *operand) {
+    size_t retsize = 0;
+    
+    switch(operand->type) {
+    case X86_OPERAND_EXTERN:
+        retsize = format_operand_extern(buf, bufsize, operand);
+        break;
+    case X86_OPERAND_IMM8:
+        retsize = format_operand_imm8(buf, bufsize, operand);
+        break;
+    case X86_OPERAND_IMM64:
+        retsize = format_operand_imm64(buf, bufsize, operand);
+        break;
+    case X86_OPERAND_LABEL:
+        retsize = format_operand_label(buf, bufsize, operand);
+        break;
+    case X86_OPERAND_LOCAL:
+        retsize = format_operand_local(buf, bufsize, operand);
+        break;
+    case X86_OPERAND_MEM8_IMM:
+        retsize = format_operand_mem8_imm(buf, bufsize, operand);
+        break;
+    case X86_OPERAND_MEM8_REG:
+        retsize = format_operand_mem8_reg(buf, bufsize, operand);
+        break;
+    case X86_OPERAND_MEM64_EXTERN:
+        retsize = format_operand_mem64_extern(buf, bufsize, operand);
+        break;
+    case X86_OPERAND_REG8:
+        retsize = format_operand_reg8(buf, bufsize, operand);
+        break;
+    case X86_OPERAND_REG32:
+        retsize = format_operand_reg32(buf, bufsize, operand);
+        break;
+    case X86_OPERAND_REG64:
+        retsize = format_operand_reg64(buf, bufsize, operand);
+        break;
+    }
+    
+    if(retsize >= bufsize) {
+        fprintf(stderr, "Error: (NASM backend) operand truncated\n");
+        exit(EXIT_FAILURE);
+    }
+}
+
+static void emit_instr_align(struct state *state, const struct x86_instr *instr) {
+    fprintf(state->f, INDENT "align %d, nop\n", instr->n);
+}
+
+static void emit_instr_add(struct state *state, const struct x86_instr *instr) {
+    char dst[OPERAND_BUFFER_SIZE];
+    char src[OPERAND_BUFFER_SIZE];
+    format_operand(dst, sizeof(dst), instr->dst);
+    format_operand(src, sizeof(src), instr->src);
+    
+    fprintf(state->f, INDENT "add %s, %s\n", dst, src);
+}
+
+static void emit_instr_call(struct state *state, const struct x86_instr *instr) {
+    char dst[OPERAND_BUFFER_SIZE];
+    format_operand(dst, sizeof(dst), instr->dst);
+    
+    fprintf(state->f, INDENT "call %s\n", dst);
     fprintf(state->f, "\n");
 }
 
-static void emit_node_out(struct state *state, const struct node *node) {
-    fprintf(state->f, INDENT "movzx rdi, byte [" REGM " + " REGP " + %d]\n", node->offset);
-    fprintf(state->f, INDENT "mov rsi, qword [stdout]\n");
-    fprintf(state->f, INDENT "call putc\n");
+static void emit_instr_cmp(struct state *state, const struct x86_instr *instr) {
+    char dst[OPERAND_BUFFER_SIZE];
+    char src[OPERAND_BUFFER_SIZE];
+    format_operand(dst, sizeof(dst), instr->dst);
+    format_operand(src, sizeof(src), instr->src);
+    
+    fprintf(state->f, INDENT "cmp %s, %s\n", dst, src);
+}
+
+static void emit_instr_jl(struct state *state, const struct x86_instr *instr) {
+    char dst[OPERAND_BUFFER_SIZE];
+    format_operand(dst, sizeof(dst), instr->dst);
+    
+    fprintf(state->f, INDENT "jl %s\n", dst);
     fprintf(state->f, "\n");
 }
 
-/* forward declaration since this function is mutually recursive with emit_node_loop() */
-static void generate_code(struct state *state, const struct node *node);
-
-static void emit_node_loop(struct state *state, const struct node *node) {
-    int label = state->label++;
+static void emit_instr_jns(struct state *state, const struct x86_instr *instr) {
+    char dst[OPERAND_BUFFER_SIZE];
+    format_operand(dst, sizeof(dst), instr->dst);
     
+    fprintf(state->f, INDENT "jns %s\n", dst);
     fprintf(state->f, "\n");
-    fprintf(state->f, INDENT "mov " REGTEMP8 ", byte [" REGM " + " REGP " + %d]\n", node->offset);
-    fprintf(state->f, INDENT "or " REGTEMP8 ", " REGTEMP8 "\n");
-    fprintf(state->f, INDENT "jz " LABEL_FMT "end\n", label);    
-    
-    fprintf(state->f, "\n");
-    fprintf(state->f, LABEL_FMT "start:\n", label);
-    
-    generate_code(state, node->body);
-    
-    fprintf(state->f, "\n");
-    fprintf(state->f, INDENT "mov " REGTEMP8 ", byte [" REGM " + " REGP " + %d]\n", node->offset);
-    fprintf(state->f, INDENT "or " REGTEMP8 ", " REGTEMP8 "\n");
-    fprintf(state->f, INDENT "jnz " LABEL_FMT "start\n", label);
-    
-    fprintf(state->f, "\n");
-    fprintf(state->f, LABEL_FMT "end:\n", label);
 }
 
-static void emit_node_check_right(struct state *state, const struct node *node) {
-    int label = state->label++;
+static void emit_instr_jnz(struct state *state, const struct x86_instr *instr) {
+    char dst[OPERAND_BUFFER_SIZE];
+    format_operand(dst, sizeof(dst), instr->dst);
     
-    fprintf(state->f, INDENT "mov " REGTEMP ", " REGP "\n");
-    fprintf(state->f, INDENT "add " REGTEMP ", %d\n", node->offset);
-    fprintf(state->f, INDENT "cmp " REGTEMP ", %d\n", 30000);
-    fprintf(state->f, INDENT "jl " LABEL_FMT "\n", label);
+    fprintf(state->f, INDENT "jnz %s\n", dst);
     fprintf(state->f, "\n");
-    fprintf(state->f, INDENT "call fail_too_far_right\n");
-    fprintf(state->f, "\n");
-    fprintf(state->f, LABEL_FMT ":\n", label);
 }
 
-static void emit_node_check_left(struct state *state, const struct node *node) {
-    int label = state->label++;
+static void emit_instr_jz(struct state *state, const struct x86_instr *instr) {
+    char dst[OPERAND_BUFFER_SIZE];
+    format_operand(dst, sizeof(dst), instr->dst);
     
-    fprintf(state->f, INDENT "mov " REGTEMP ", " REGP "\n");
-    fprintf(state->f, INDENT "add " REGTEMP ", %d\n", node->offset);
-    fprintf(state->f, INDENT "jns " LABEL_FMT "\n", label);
+    fprintf(state->f, INDENT "jz %s\n", dst);
     fprintf(state->f, "\n");
-    fprintf(state->f, INDENT "call fail_too_far_left\n");
+}
+
+static void emit_instr_label(struct state *state, const struct x86_instr *instr) {
+    char dst[OPERAND_BUFFER_SIZE];
+    format_operand(dst, sizeof(dst), instr->dst);
+    
+    fprintf(state->f, "%s:\n", dst);
+}
+
+static void emit_instr_mov(struct state *state, const struct x86_instr *instr) {
+    char dst[OPERAND_BUFFER_SIZE];
+    char src[OPERAND_BUFFER_SIZE];
+    format_operand(dst, sizeof(dst), instr->dst);
+    format_operand(src, sizeof(src), instr->src);
+    
+    fprintf(state->f, INDENT "mov %s, %s\n", dst, src);
+}
+
+static void emit_instr_movzx(struct state *state, const struct x86_instr *instr) {
+    char dst[OPERAND_BUFFER_SIZE];
+    char src[OPERAND_BUFFER_SIZE];
+    format_operand(dst, sizeof(dst), instr->dst);
+    format_operand(src, sizeof(src), instr->src);
+    
+    fprintf(state->f, INDENT "movzx %s, %s\n", dst, src);
+}
+
+static void emit_instr_or(struct state *state, const struct x86_instr *instr) {
+    char dst[OPERAND_BUFFER_SIZE];
+    char src[OPERAND_BUFFER_SIZE];
+    format_operand(dst, sizeof(dst), instr->dst);
+    format_operand(src, sizeof(src), instr->src);
+    
+    fprintf(state->f, INDENT "or %s, %s\n", dst, src);
+}
+
+static void emit_instr_pop(struct state *state, const struct x86_instr *instr) {
+    char dst[OPERAND_BUFFER_SIZE];
+    format_operand(dst, sizeof(dst), instr->dst);
+    
+    fprintf(state->f, INDENT "pop %s\n", dst);
+}
+
+static void emit_instr_push(struct state *state, const struct x86_instr *instr) {
+    char src[OPERAND_BUFFER_SIZE];
+    format_operand(src, sizeof(src), instr->src);
+    
+    fprintf(state->f, INDENT "push %s\n", src);
+}
+
+static void emit_instr_ret(struct state *state, const struct x86_instr *instr) {
+    fprintf(state->f, INDENT "ret\n");
     fprintf(state->f, "\n");
-    fprintf(state->f, LABEL_FMT ":\n", label);
 }
 
 static void generate_code(struct state *state, const struct node *node) {
-    while(node != NULL) {
-        switch(node->type) {
-        case NODE_ADD:
-            emit_node_add(state, node);
+    struct x86_instr *instructions = generate_code_for_x86(node);
+    
+    struct x86_instr *instr = instructions;
+    
+    while(instr != NULL) {
+        switch(instr->op) {
+        case X86_INSTR_ALIGN:
+            emit_instr_align(state, instr);
             break;
-        case NODE_RIGHT:
-            emit_node_right(state, node);
+        case X86_INSTR_ADD:
+            emit_instr_add(state, instr);
             break;
-        case NODE_IN:
-            emit_node_in(state, node);
+        case X86_INSTR_CALL:
+            emit_instr_call(state, instr);
             break;
-        case NODE_OUT:
-            emit_node_out(state, node);
+        case X86_INSTR_CMP:
+            emit_instr_cmp(state, instr);
             break;
-        case NODE_LOOP:
-        case NODE_STATIC_LOOP:
-            emit_node_loop(state, node);
+        case X86_INSTR_JL:
+            emit_instr_jl(state, instr);
             break;
-        case NODE_CHECK_RIGHT:
-            emit_node_check_right(state, node);
+        case X86_INSTR_JNS:
+            emit_instr_jns(state, instr);
             break;
-        case NODE_CHECK_LEFT:
-            emit_node_check_left(state, node);
+        case X86_INSTR_JNZ:
+            emit_instr_jnz(state, instr);
+            break;
+        case X86_INSTR_JZ:
+            emit_instr_jz(state, instr);
+            break;
+        case X86_INSTR_LABEL:
+            emit_instr_label(state, instr);
+            break;
+        case X86_INSTR_MOV:
+            emit_instr_mov(state, instr);
+            break;
+        case X86_INSTR_MOVZX:
+            emit_instr_movzx(state, instr);
+            break;
+        case X86_INSTR_OR:
+            emit_instr_or(state, instr);
+            break;
+        case X86_INSTR_POP:
+            emit_instr_pop(state, instr);
+            break;
+        case X86_INSTR_PUSH:
+            emit_instr_push(state, instr);
+            break;
+        case X86_INSTR_RET:
+            emit_instr_ret(state, instr);
             break;
         }
-        node = node->next;
+        
+        instr = instr->next;
     }
+    
+    x86_instr_free_tree(instructions);
 }
 
 static void emit_fail_too_far_right_decl(struct state *state, const struct node *root) {

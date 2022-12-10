@@ -34,8 +34,12 @@ sources = \
 	app/app.c \
 	app/options.c \
 	backend/backend.c \
+	backend/builder.c \
 	backend/c.c \
+	backend/codegen.c \
 	backend/nasm.c \
+	backend/symbols.c \
+	backend/x86.c \
 	frontend/parser.c \
 	interpreter/slow.c \
 	interpreter/tree.c \
