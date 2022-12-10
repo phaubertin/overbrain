@@ -123,6 +123,7 @@ typedef enum {
     X86_OPERAND_MEM8_IMM,
     X86_OPERAND_MEM8_REG,
     X86_OPERAND_MEM64_EXTERN,
+    X86_OPERAND_MEM64_LOCAL,
     X86_OPERAND_REG8,
     X86_OPERAND_REG32,
     X86_OPERAND_REG64
@@ -150,6 +151,8 @@ struct x86_operand *x86_operand_new_mem8_imm(int n);
 struct x86_operand *x86_operand_new_mem8_reg(x86_reg64 r1, x86_reg64 r2, int n);
 
 struct x86_operand *x86_operand_new_mem64_extern(extern_symbol symbol);
+
+struct x86_operand *x86_operand_new_mem64_local(local_symbol symbol);
 
 struct x86_operand *x86_operand_new_reg8(x86_reg8 r);
 

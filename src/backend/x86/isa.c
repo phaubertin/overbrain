@@ -155,6 +155,12 @@ struct x86_operand *x86_operand_new_mem64_extern(extern_symbol symbol) {
     return operand;
 }
 
+struct x86_operand *x86_operand_new_mem64_local(local_symbol symbol) {
+    struct x86_operand *operand = oper_new(X86_OPERAND_MEM64_LOCAL);
+    operand->n = symbol;
+    return operand;
+}
+
 struct x86_operand *x86_operand_new_reg8(x86_reg8 r) {
     struct x86_operand *operand = oper_new(X86_OPERAND_REG8);
     operand->r1 = r;
@@ -318,7 +324,9 @@ struct x86_instr *x86_instr_new_mov(struct x86_operand *dst, struct x86_operand 
         {X86_OPERAND_MEM8_REG, X86_OPERAND_REG8},
         {X86_OPERAND_REG32, X86_OPERAND_REG32},
         {X86_OPERAND_REG64, X86_OPERAND_MEM64_EXTERN},
+        {X86_OPERAND_REG64, X86_OPERAND_MEM64_LOCAL},
         {X86_OPERAND_REG64, X86_OPERAND_REG64},
+        {X86_OPERAND_REG64, X86_OPERAND_IMM64},
     };
     check_both_operand_types(dst, src, supported, sizeof(supported), "mov");
     

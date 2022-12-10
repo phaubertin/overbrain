@@ -45,7 +45,8 @@ char *extern_symbol_names[] = {
 };
 
 char *local_symbol_names[] = {
-    [LOCAL_FAIL_TOO_FAR_RIGHT] = "fail_too_far_right",
-    [LOCAL_FAIL_TOO_FAR_LEFT] = "fail_too_far_left",
     [LOCAL_CHECK_INPUT] = "check_input",
+    [LOCAL_FAIL_TOO_FAR_LEFT] = "fail_too_far_left",
+    [LOCAL_FAIL_TOO_FAR_RIGHT] = "fail_too_far_right",
+    [LOCAL_M] = "m"
 };

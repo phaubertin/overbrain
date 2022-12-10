@@ -47,9 +47,10 @@ typedef enum {
 extern char *extern_symbol_names[];
 
 typedef enum {
-    LOCAL_FAIL_TOO_FAR_RIGHT,
+    LOCAL_CHECK_INPUT,
     LOCAL_FAIL_TOO_FAR_LEFT,
-    LOCAL_CHECK_INPUT
+    LOCAL_FAIL_TOO_FAR_RIGHT,
+    LOCAL_M
 } local_symbol;
 
 extern char *local_symbol_names[];

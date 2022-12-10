@@ -105,7 +105,7 @@ static void lower_node_out(struct x86_builder *builder, struct state *state, con
 }
 
 /* forward declaration because mutually recursive with lower_node_loop() */
-static void lower_to_x86_recursive(struct x86_builder *builder, struct state *state, const struct node *node);
+static void generate_code_recursive(struct x86_builder *builder, struct state *state, const struct node *node);
 
 static void lower_node_loop(struct x86_builder *builder, struct state *state, const struct node *node) {
     int start = state->label++;
@@ -127,7 +127,7 @@ static void lower_node_loop(struct x86_builder *builder, struct state *state, co
     
     x86_builder_append_instr(builder, x86_instr_new_label(start));
     
-    lower_to_x86_recursive(builder, state, node->body);
+    generate_code_recursive(builder, state, node->body);
     
     x86_builder_append_instr(builder, x86_instr_new_mov(
         x86_operand_new_reg8(REG8TEMP),
@@ -193,7 +193,7 @@ static void lower_node_check_left(struct x86_builder *builder, struct state *sta
 }
 
 
-static void lower_to_x86_recursive(struct x86_builder *builder, struct state *state, const struct node *node) {
+static void generate_code_recursive(struct x86_builder *builder, struct state *state, const struct node *node) {
     while(node != NULL) {
         switch(node->type) {
         case NODE_ADD:
@@ -223,6 +223,33 @@ static void lower_to_x86_recursive(struct x86_builder *builder, struct state *st
     }
 }
 
+static void generate_code(struct x86_builder *builder, struct state *state, const struct node *node) {
+    x86_builder_append_instr(builder, x86_instr_new_push(
+        x86_operand_new_reg64(X86_REG_RBP)
+    ));
+    
+    x86_builder_append_instr(builder, x86_instr_new_mov(
+        x86_operand_new_reg64(REGM),
+        x86_operand_new_mem64_local(LOCAL_M)
+    ));
+    x86_builder_append_instr(builder, x86_instr_new_mov(
+        x86_operand_new_reg64(REGP),
+        x86_operand_new_imm64(0)
+    ));
+    
+    generate_code_recursive(builder, state, node);
+    
+    x86_builder_append_instr(builder, x86_instr_new_pop(
+        x86_operand_new_reg64(X86_REG_RBP)
+    ));
+    
+    x86_builder_append_instr(builder, x86_instr_new_mov(
+        x86_operand_new_reg64(REG64RETVAL),
+        x86_operand_new_imm64(0)
+    ));
+    x86_builder_append_instr(builder, x86_instr_new_ret());
+}
+
 struct x86_instr *generate_code_for_x86(const struct node *node) {
     struct state state;
     initialize_state(&state);
@@ -230,7 +257,7 @@ struct x86_instr *generate_code_for_x86(const struct node *node) {
     struct x86_builder builder;
     x86_builder_initialize_empty(&builder);
     
-    lower_to_x86_recursive(&builder, &state, node);
+    generate_code(&builder, &state, node);
     
     return x86_builder_get_first(&builder);
 }

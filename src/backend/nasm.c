@@ -94,9 +94,15 @@ static void generate_header(struct state *state, const struct node *root) {
     }
     fprintf(state->f, "\n");
     
-    fprintf(state->f, INDENT "section .bss\n");
+    fprintf(state->f, INDENT "section .data\n");
     fprintf(state->f, "\n");
     fprintf(state->f, "m:\n");
+    fprintf(state->f, INDENT "dq marray\n");
+    fprintf(state->f, "\n");
+    
+    fprintf(state->f, INDENT "section .bss\n");
+    fprintf(state->f, "\n");
+    fprintf(state->f, "marray:\n");
     fprintf(state->f, INDENT "resb 30000\n");
     fprintf(state->f, "\n");
     
@@ -105,11 +111,6 @@ static void generate_header(struct state *state, const struct node *root) {
     
     fprintf(state->f, INDENT "global main:function (main.end - main)\n");
     fprintf(state->f, "main:\n");
-    fprintf(state->f, INDENT "push rbp\n");
-    fprintf(state->f, "\n");
-    fprintf(state->f, INDENT "mov " REGM ", m\n");
-    fprintf(state->f, INDENT "mov " REGP ", 0\n");
-    fprintf(state->f, "\n");
 }
 
 static size_t format_operand_extern(char *buf, size_t bufsize, const struct x86_operand *operand) {
@@ -142,6 +143,10 @@ static size_t format_operand_mem8_reg(char *buf, size_t bufsize, const struct x8
 
 static size_t format_operand_mem64_extern(char *buf, size_t bufsize, const struct x86_operand *operand) {
     return snprintf(buf, bufsize, "qword [%s]", extern_symbol_names[operand->n]);
+}
+
+static size_t format_operand_mem64_local(char *buf, size_t bufsize, const struct x86_operand *operand) {
+    return snprintf(buf, bufsize, "qword [%s]", local_symbol_names[operand->n]);
 }
 
 static size_t format_operand_reg8(char *buf, size_t bufsize, const struct x86_operand *operand) {
@@ -183,6 +188,9 @@ static void format_operand(char *buf, size_t bufsize, const struct x86_operand *
         break;
     case X86_OPERAND_MEM64_EXTERN:
         retsize = format_operand_mem64_extern(buf, bufsize, operand);
+        break;
+    case X86_OPERAND_MEM64_LOCAL:
+        retsize = format_operand_mem64_local(buf, bufsize, operand);
         break;
     case X86_OPERAND_REG8:
         retsize = format_operand_reg8(buf, bufsize, operand);
@@ -477,11 +485,6 @@ static void emit_start(struct state *state) {
 
 static void generate_footer(struct state *state, const struct node *root) {
     fprintf(state->f, ".end:\n");
-    fprintf(state->f, INDENT "pop rbp\n");
-    fprintf(state->f, "\n");
-    fprintf(state->f, INDENT "mov rax, 0\n");
-    fprintf(state->f, INDENT "ret\n");
-    fprintf(state->f, "\n");
     
     emit_fail_too_far_right_decl(state, root);
     emit_fail_too_far_left_decl(state, root);
