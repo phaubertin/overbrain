@@ -31,8 +31,8 @@
 #ifndef BFC_BACKEND_LOWERING_H
 #define BFC_BACKEND_LOWERING_H
 
-#include "../ir/node.h"
-#include "x86.h"
+#include "../../ir/node.h"
+#include "isa.h"
 
 struct x86_instr *generate_code_for_x86(const struct node *node);
 

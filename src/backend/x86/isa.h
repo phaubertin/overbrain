@@ -31,7 +31,7 @@
 #ifndef BFC_BACKEND_X86_H
 #define BFC_BACKEND_X86_H
 
-#include "symbols.h"
+#include "../symbols.h"
 
 typedef enum {
     X86_REG_AL = 0,

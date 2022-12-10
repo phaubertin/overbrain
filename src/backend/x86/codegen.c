@@ -29,9 +29,9 @@
  */
 
 #include <stddef.h>
+#include "../symbols.h"
 #include "builder.h"
 #include "codegen.h"
-#include "symbols.h"
 
 
 #define REGM        X86_REG_RBX

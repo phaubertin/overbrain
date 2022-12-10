@@ -31,7 +31,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "x86.h"
+#include "isa.h"
 
 char *x86_reg8_names[] = {
     [X86_REG_AL] = "al",

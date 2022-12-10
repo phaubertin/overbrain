@@ -31,7 +31,7 @@
 #ifndef BFC_BACKEND_BUILDER_H
 #define BFC_BACKEND_BUILDER_H
 
-#include "x86.h"
+#include "isa.h"
 
 struct x86_builder {
     struct x86_instr *head;
