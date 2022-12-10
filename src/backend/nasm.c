@@ -32,7 +32,7 @@
 #include <stdlib.h>
 #include "../ir/query.h"
 #include "nasm.h"
-#include "symbols.h"
+#include "common/symbols.h"
 #include "x86/codegen.h"
 #include "x86/isa.h"
 

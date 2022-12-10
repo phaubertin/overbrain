@@ -36,7 +36,7 @@ sources = \
 	backend/backend.c \
 	backend/c.c \
 	backend/nasm.c \
-	backend/symbols.c \
+	backend/common/symbols.c \
 	backend/x86/builder.c \
 	backend/x86/codegen.c \
 	backend/x86/isa.c \

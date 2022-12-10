@@ -29,7 +29,7 @@
  */
 
 #include <stddef.h>
-#include "../symbols.h"
+#include "../common/symbols.h"
 #include "builder.h"
 #include "codegen.h"
 
