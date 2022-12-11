@@ -49,6 +49,7 @@ struct options {
     option_action action;
     option_backend backend;
     const char *filename;
+    const char *ofilename;
     int optimization_level;
     bool no_check;
 };

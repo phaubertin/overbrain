@@ -42,6 +42,7 @@ typedef enum {
     OPTION_BACKEND,
     OPTION_COMPILE,
     OPTION_NO_CHECK,
+    OPTION_O,
     OPTION_O0,
     OPTION_O1,
     OPTION_O2,
@@ -55,6 +56,7 @@ static const enum_value option_names[] = {
     {"-backend",    OPTION_BACKEND},
     {"-compile",    OPTION_COMPILE},
     {"-no-check",   OPTION_NO_CHECK},
+    {"-o",          OPTION_O},
     {"-O0",         OPTION_O0},
     {"-O1",         OPTION_O1},
     {"-O2",         OPTION_O2},
@@ -92,6 +94,7 @@ static int parse_option_name(const char *arg) {
 
 bool parse_options(struct options *options, int argc, char *argv[]) {
     options->no_check = false;
+    options->ofilename = NULL;
     
     if(argc < 2) {
         return false;
@@ -124,7 +127,6 @@ bool parse_options(struct options *options, int argc, char *argv[]) {
             
             options->backend = parse_enum_value(argv[index], backend_names);
             
-            
             if(options->backend == BACKEND_UKNOWN) {
                 fprintf(stderr, "Unknown backend '%s'\n", argv[index]);
                 return false;
@@ -135,6 +137,16 @@ bool parse_options(struct options *options, int argc, char *argv[]) {
             break;
         case OPTION_NO_CHECK:
             options->no_check = true;
+            break;
+        case OPTION_O:
+            ++index;
+            
+            if(index >= argc) {
+                fprintf(stderr, "Empty -o argument\n");
+                return false;
+            }
+            
+            options->ofilename = argv[index];
             break;
         case OPTION_O0:
             options->optimization_level = 0;

@@ -58,4 +58,4 @@ examples/hello: examples/hello.c
 examples/hello.c: examples/hello.bf all
 
 %.c: %.bf
-	src/bfc $< > $@
+	src/bfc -o $@ $<

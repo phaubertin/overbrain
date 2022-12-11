@@ -31,10 +31,9 @@
 #ifndef BFC_BACKEND_H
 #define BFC_BACKEND_H
 
-#include <stdio.h>
 #include "../app/options.h"
 #include "../ir/node.h"
 
-void backend_generate(FILE *f, const struct node *root, const struct options *options);
+void backend_generate(const struct node *root, const struct options *options);
 
 #endif

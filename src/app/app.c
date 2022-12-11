@@ -46,7 +46,7 @@ static struct node *read_program(const char *filename) {
     FILE *file = fopen(filename, "r");
     
     if(file == NULL) {
-        fprintf(stderr, "Error opening file: %s\n", strerror(errno));
+        fprintf(stderr, "Error opening input file: %s\n", strerror(errno));
         exit(EXIT_FAILURE);
     }
     
@@ -104,7 +104,7 @@ int run_app(enum app app, int argc, char *argv[]) {
     node_free(program);
     
     if(options.action == ACTION_COMPILE) {
-        backend_generate(stdout, optimized, &options);
+        backend_generate(optimized, &options);
     } else {
         tree_interpreter_run_program(optimized);
     }

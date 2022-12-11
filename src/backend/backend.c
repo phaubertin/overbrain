@@ -28,12 +28,29 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <errno.h>
 #include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include "backend.h"
 #include "c.h"
 #include "nasm.h"
 
-void backend_generate(FILE *f, const struct node *root, const struct options *options) {
+void backend_generate(const struct node *root, const struct options *options) {
+    FILE *f;
+    
+    if(options->ofilename == NULL) {
+        f = stdout;
+    } else {
+        f = fopen(options->ofilename, "w");
+    }
+    
+    if(f == NULL) {
+        fprintf(stderr, "Error opening output file: %s\n", strerror(errno));
+        exit(EXIT_FAILURE);
+    }
+    
     switch(options->backend) {
     case BACKEND_C:
         c_generate(f, root);
