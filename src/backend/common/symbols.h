@@ -36,15 +36,15 @@ typedef enum {
     EXTERN_FERROR,
     EXTERN_FGETC,
     EXTERN_FPRINTF,
+    EXTERN_LIBC_START_MAIN,
     EXTERN_PERROR,
     EXTERN_PUTC,
     EXTERN_STDERR,
     EXTERN_STDIN,
-    EXTERN_STDOUT,
-    EXTERN_LIBC_START_MAIN
+    EXTERN_STDOUT
 } extern_symbol;
 
-extern char *extern_symbol_names[];
+extern const char *extern_symbol_names[];
 
 typedef enum {
     LOCAL_CHECK_INPUT,
@@ -55,9 +55,10 @@ typedef enum {
     LOCAL_MSG_EOI,
     LOCAL_MSG_FERR,
     LOCAL_MSG_LEFT,
-    LOCAL_MSG_RIGHT
+    LOCAL_MSG_RIGHT,
+    LOCAL_START,
 } local_symbol;
 
-extern char *local_symbol_names[];
+extern const char *local_symbol_names[];
 
 #endif
