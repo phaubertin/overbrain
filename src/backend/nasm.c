@@ -38,12 +38,6 @@
 #include "x86/isa.h"
 
 #define INDENT "    "
-
-#define REGM "rbx"
-#define REGP "r13"
-#define REGTEMP "rax"
-#define REGTEMP8 "al"
-
 #define OPERAND_BUFFER_SIZE 32
 
 struct state {
