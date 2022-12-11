@@ -117,7 +117,13 @@ struct x86_operand *x86_operand_new_imm8(int n) {
     return operand;
 }
 
-struct x86_operand *x86_operand_new_imm64(int n) {
+struct x86_operand *x86_operand_new_imm32(int n) {
+    struct x86_operand *operand = oper_new(X86_OPERAND_IMM32);
+    operand->n = n;
+    return operand;
+}
+
+struct x86_operand *x86_operand_new_imm64(int64_t n) {
     struct x86_operand *operand = oper_new(X86_OPERAND_IMM64);
     operand->n = n;
     return operand;
@@ -135,12 +141,6 @@ struct x86_operand *x86_operand_new_local(local_symbol symbol) {
     return operand;
 }
 
-struct x86_operand *x86_operand_new_mem8_imm(int n) {
-    struct x86_operand *operand = oper_new(X86_OPERAND_MEM8_IMM);
-    operand->n = n;
-    return operand;
-}
-
 struct x86_operand *x86_operand_new_mem8_reg(x86_reg64 r1, x86_reg64 r2, int n) {
     struct x86_operand *operand = oper_new(X86_OPERAND_MEM8_REG);
     operand->r1 = r1;
@@ -152,6 +152,12 @@ struct x86_operand *x86_operand_new_mem8_reg(x86_reg64 r1, x86_reg64 r2, int n) 
 struct x86_operand *x86_operand_new_mem64_extern(extern_symbol symbol) {
     struct x86_operand *operand = oper_new(X86_OPERAND_MEM64_EXTERN);
     operand->n = symbol;
+    return operand;
+}
+
+struct x86_operand *x86_operand_new_mem64_imm(int n) {
+    struct x86_operand *operand = oper_new(X86_OPERAND_MEM64_IMM);
+    operand->n = n;
     return operand;
 }
 
@@ -255,6 +261,18 @@ struct x86_instr *x86_instr_new_add(struct x86_operand *dst, struct x86_operand 
     return instr;
 }
 
+struct x86_instr *x86_instr_new_and(struct x86_operand *dst, struct x86_operand *src) {
+    const struct two_operand_types supported[] = {
+        {X86_OPERAND_REG64, X86_OPERAND_IMM64}
+    };
+    check_both_operand_types(dst, src, supported, sizeof(supported), "and");
+    
+    struct x86_instr *instr = x86_instr_new(X86_INSTR_AND);
+    instr->dst = dst;
+    instr->src = src;
+    return instr;
+}
+
 struct x86_instr *x86_instr_new_call(struct x86_operand *target) {
     const x86_operand_type supported[] = {X86_OPERAND_EXTERN, X86_OPERAND_LOCAL};
     check_single_operand_type(target, supported, sizeof(supported), "call");
@@ -266,6 +284,7 @@ struct x86_instr *x86_instr_new_call(struct x86_operand *target) {
 
 struct x86_instr *x86_instr_new_cmp(struct x86_operand *dst, struct x86_operand *src) {
     const struct two_operand_types supported[] = {
+        {X86_OPERAND_REG32, X86_OPERAND_IMM32},
         {X86_OPERAND_REG64, X86_OPERAND_IMM64},
     };
     check_both_operand_types(dst, src, supported, sizeof(supported), "cmp");
@@ -281,6 +300,15 @@ struct x86_instr *x86_instr_new_jl(struct x86_operand *target) {
     check_single_operand_type(target, supported, sizeof(supported), "conditional jump (jl)");
     
     struct x86_instr *instr = x86_instr_new(X86_INSTR_JL);
+    instr->dst = target;
+    return instr;
+}
+
+struct x86_instr *x86_instr_new_jmp(struct x86_operand *target) {
+    const x86_operand_type supported[] = {X86_OPERAND_LABEL};
+    check_single_operand_type(target, supported, sizeof(supported), "jump (jmp)");
+    
+    struct x86_instr *instr = x86_instr_new(X86_INSTR_JMP);
     instr->dst = target;
     return instr;
 }
@@ -323,10 +351,13 @@ struct x86_instr *x86_instr_new_mov(struct x86_operand *dst, struct x86_operand 
         {X86_OPERAND_REG8, X86_OPERAND_MEM8_REG},
         {X86_OPERAND_MEM8_REG, X86_OPERAND_REG8},
         {X86_OPERAND_REG32, X86_OPERAND_REG32},
+        {X86_OPERAND_REG64, X86_OPERAND_IMM64},
+        {X86_OPERAND_REG64, X86_OPERAND_LABEL},
+        {X86_OPERAND_REG64, X86_OPERAND_LOCAL},
         {X86_OPERAND_REG64, X86_OPERAND_MEM64_EXTERN},
+        {X86_OPERAND_REG64, X86_OPERAND_MEM64_IMM},
         {X86_OPERAND_REG64, X86_OPERAND_MEM64_LOCAL},
         {X86_OPERAND_REG64, X86_OPERAND_REG64},
-        {X86_OPERAND_REG64, X86_OPERAND_IMM64},
     };
     check_both_operand_types(dst, src, supported, sizeof(supported), "mov");
     
@@ -350,7 +381,8 @@ struct x86_instr *x86_instr_new_movzx(struct x86_operand *dst, struct x86_operan
 
 struct x86_instr *x86_instr_new_or(struct x86_operand *dst, struct x86_operand *src) {
     const struct two_operand_types supported[] = {
-        {X86_OPERAND_REG8, X86_OPERAND_REG8}
+        {X86_OPERAND_REG8, X86_OPERAND_REG8},
+        {X86_OPERAND_REG32, X86_OPERAND_REG32}
     };
     check_both_operand_types(dst, src, supported, sizeof(supported), "or");
     

@@ -28,7 +28,9 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include "../common/symbols.h"
 #include "builder.h"
 #include "codegen.h"
@@ -42,6 +44,10 @@
 #define REG64ARG1   X86_REG_RDI
 #define REG32ARG2   X86_REG_ESI
 #define REG64ARG2   X86_REG_RSI
+#define REG64ARG3   X86_REG_RDX
+#define REG64ARG4   X86_REG_RCX
+#define REG64ARG5   X86_REG_R8
+#define REG64ARG6   X86_REG_R9
 #define REG8RETVAL  X86_REG_AL
 #define REG32RETVAL X86_REG_EAX
 #define REG64RETVAL X86_REG_RAX
@@ -258,6 +264,189 @@ struct x86_instr *generate_code_for_x86(const struct node *node) {
     x86_builder_initialize_empty(&builder);
     
     generate_code(&builder, &state, node);
+    
+    return x86_builder_get_first(&builder);
+}
+
+struct x86_instr *generate_start_for_x86(void) {
+    struct x86_builder builder;
+    x86_builder_initialize_empty(&builder);
+    
+    const int label_return = 1;
+    
+    x86_builder_append_instr(&builder, x86_instr_new_mov(
+        x86_operand_new_reg64(X86_REG_RBP),
+        x86_operand_new_imm64(0)
+    ));
+    x86_builder_append_instr(&builder, x86_instr_new_mov(
+        x86_operand_new_reg64(REG64ARG6),
+        x86_operand_new_reg64(REG64ARG3)
+    ));
+    x86_builder_append_instr(&builder, x86_instr_new_pop(
+        x86_operand_new_reg64(REG64ARG2)
+    ));
+    x86_builder_append_instr(&builder, x86_instr_new_mov(
+        x86_operand_new_reg64(REG64ARG3),
+        x86_operand_new_reg64(X86_REG_RSP)
+    ));
+    x86_builder_append_instr(&builder, x86_instr_new_and(
+        x86_operand_new_reg64(X86_REG_RSP),
+        x86_operand_new_imm64(INT64_C(~0xf))
+    ));
+    x86_builder_append_instr(&builder, x86_instr_new_push(
+        x86_operand_new_reg64(X86_REG_RAX)
+    ));
+    x86_builder_append_instr(&builder, x86_instr_new_push(
+        x86_operand_new_reg64(X86_REG_RSP)
+    ));
+    x86_builder_append_instr(&builder, x86_instr_new_mov(
+        x86_operand_new_reg64(REG64ARG4),
+        x86_operand_new_label(label_return)
+    ));
+    x86_builder_append_instr(&builder, x86_instr_new_mov(
+        x86_operand_new_reg64(REG64ARG5),
+        x86_operand_new_reg64(REG64ARG4)
+    ));
+    x86_builder_append_instr(&builder, x86_instr_new_mov(
+        x86_operand_new_reg64(REG64ARG1),
+        x86_operand_new_local(LOCAL_MAIN)
+    ));
+    x86_builder_append_instr(&builder, x86_instr_new_call(
+        x86_operand_new_extern(EXTERN_LIBC_START_MAIN)
+    ));
+    
+    /* __libc_start_main should not return, crash if it does */
+    x86_builder_append_instr(&builder, x86_instr_new_mov(
+        x86_operand_new_reg64(REG64TEMP),
+        /* NULL */
+        x86_operand_new_mem64_imm(0)
+    ));
+    
+    x86_builder_append_instr(&builder, x86_instr_new_label(label_return));
+    x86_builder_append_instr(&builder, x86_instr_new_ret());
+    
+    return x86_builder_get_first(&builder);
+}
+
+static void generate_fail_too_far(struct x86_builder *builder, local_symbol message) {
+    x86_builder_append_instr(builder, x86_instr_new_push(
+        x86_operand_new_reg64(X86_REG_RBP)
+    ));
+    
+    x86_builder_append_instr(builder, x86_instr_new_mov(
+        x86_operand_new_reg64(REG64ARG1),
+        x86_operand_new_mem64_extern(EXTERN_STDERR)
+    ));
+    x86_builder_append_instr(builder, x86_instr_new_mov(
+        x86_operand_new_reg64(REG64ARG2),
+        x86_operand_new_local(message)
+    ));
+    x86_builder_append_instr(builder, x86_instr_new_call(
+        x86_operand_new_extern(EXTERN_FPRINTF)
+    ));
+    
+    x86_builder_append_instr(builder, x86_instr_new_mov(
+        x86_operand_new_reg64(REG64ARG1),
+        x86_operand_new_imm64(EXIT_FAILURE)
+    ));
+    x86_builder_append_instr(builder, x86_instr_new_call(
+        x86_operand_new_extern(EXTERN_EXIT)
+    ));  
+}
+
+struct x86_instr *generate_fail_too_far_right_for_x86(void) {
+    struct x86_builder builder;
+    x86_builder_initialize_empty(&builder);
+    
+    generate_fail_too_far(&builder, LOCAL_MSG_RIGHT);
+    
+    return x86_builder_get_first(&builder);
+}
+
+struct x86_instr *generate_fail_too_far_left_for_x86(void) {
+    struct x86_builder builder;
+    x86_builder_initialize_empty(&builder);
+    
+    generate_fail_too_far(&builder, LOCAL_MSG_LEFT);
+    
+    return x86_builder_get_first(&builder);
+}
+
+struct x86_instr *generate_check_input_for_x86(void) {
+    struct x86_builder builder;
+    x86_builder_initialize_empty(&builder);
+    
+    const int label_eoi = 1;
+    const int label_die = 2;
+    const int label_done = 3;
+    
+    x86_builder_append_instr(&builder, x86_instr_new_push(
+        x86_operand_new_reg64(X86_REG_RBP)
+    ));
+
+    x86_builder_append_instr(&builder, x86_instr_new_cmp(
+        x86_operand_new_reg32(REG32ARG1),
+        x86_operand_new_imm32(EOF)
+    ));
+    x86_builder_append_instr(&builder, x86_instr_new_jnz(
+        x86_operand_new_label(label_done)
+    ));
+    
+    x86_builder_append_instr(&builder, x86_instr_new_mov(
+        x86_operand_new_reg64(REG64ARG1),
+        x86_operand_new_mem64_extern(EXTERN_STDIN)
+    ));
+    x86_builder_append_instr(&builder, x86_instr_new_call(
+        x86_operand_new_extern(EXTERN_FERROR)
+    ));
+    
+    x86_builder_append_instr(&builder, x86_instr_new_or(
+        x86_operand_new_reg32(REG32RETVAL),
+        x86_operand_new_reg32(REG32RETVAL)
+    ));
+    x86_builder_append_instr(&builder, x86_instr_new_jz(
+        x86_operand_new_label(label_eoi)
+    ));
+    
+    x86_builder_append_instr(&builder, x86_instr_new_mov(
+        x86_operand_new_reg64(REG64ARG1),
+        x86_operand_new_local(LOCAL_MSG_FERR)
+    ));
+    x86_builder_append_instr(&builder, x86_instr_new_call(
+        x86_operand_new_extern(EXTERN_PERROR)
+    ));
+    
+    x86_builder_append_instr(&builder, x86_instr_new_jmp(
+        x86_operand_new_label(label_die)
+    ));
+    
+    x86_builder_append_instr(&builder, x86_instr_new_label(label_eoi));
+    x86_builder_append_instr(&builder, x86_instr_new_mov(
+        x86_operand_new_reg64(REG64ARG1),
+        x86_operand_new_mem64_extern(EXTERN_STDERR)
+    ));
+    x86_builder_append_instr(&builder, x86_instr_new_mov(
+        x86_operand_new_reg64(REG64ARG2),
+        x86_operand_new_local(LOCAL_MSG_EOI)
+    ));
+    x86_builder_append_instr(&builder, x86_instr_new_call(
+        x86_operand_new_extern(EXTERN_FPRINTF)
+    ));
+    
+    x86_builder_append_instr(&builder, x86_instr_new_label(label_die));
+    x86_builder_append_instr(&builder, x86_instr_new_mov(
+        x86_operand_new_reg64(REG64ARG1),
+        x86_operand_new_imm64(EXIT_FAILURE)
+    ));
+    x86_builder_append_instr(&builder, x86_instr_new_call(
+        x86_operand_new_extern(EXTERN_EXIT)
+    ));
+    
+    x86_builder_append_instr(&builder, x86_instr_new_label(label_done));
+    x86_builder_append_instr(&builder, x86_instr_new_pop(
+        x86_operand_new_reg64(X86_REG_RBP)
+    ));
+    x86_builder_append_instr(&builder, x86_instr_new_ret());
     
     return x86_builder_get_first(&builder);
 }

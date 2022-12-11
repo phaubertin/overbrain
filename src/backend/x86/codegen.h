@@ -36,4 +36,13 @@
 
 struct x86_instr *generate_code_for_x86(const struct node *node);
 
+struct x86_instr *generate_start_for_x86(void);
+
+struct x86_instr *generate_fail_too_far_right_for_x86(void);
+
+struct x86_instr *generate_fail_too_far_left_for_x86(void);
+
+struct x86_instr *generate_check_input_for_x86(void);
+
+
 #endif

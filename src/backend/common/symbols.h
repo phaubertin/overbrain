@@ -50,7 +50,12 @@ typedef enum {
     LOCAL_CHECK_INPUT,
     LOCAL_FAIL_TOO_FAR_LEFT,
     LOCAL_FAIL_TOO_FAR_RIGHT,
-    LOCAL_M
+    LOCAL_M,
+    LOCAL_MAIN,
+    LOCAL_MSG_EOI,
+    LOCAL_MSG_FERR,
+    LOCAL_MSG_LEFT,
+    LOCAL_MSG_RIGHT
 } local_symbol;
 
 extern char *local_symbol_names[];

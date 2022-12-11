@@ -31,6 +31,7 @@
 #ifndef BFC_BACKEND_X86_H
 #define BFC_BACKEND_X86_H
 
+#include <stdint.h>
 #include "../common/symbols.h"
 
 typedef enum {
@@ -99,9 +100,11 @@ extern char *x86_reg64_names[];
 typedef enum {
     X86_INSTR_ALIGN,
     X86_INSTR_ADD,
+    X86_INSTR_AND,
     X86_INSTR_CALL,
     X86_INSTR_CMP,
     X86_INSTR_JL,
+    X86_INSTR_JMP,
     X86_INSTR_JNS,
     X86_INSTR_JNZ,
     X86_INSTR_JZ,
@@ -117,12 +120,13 @@ typedef enum {
 typedef enum {
     X86_OPERAND_EXTERN,
     X86_OPERAND_IMM8,
+    X86_OPERAND_IMM32,
     X86_OPERAND_IMM64,
     X86_OPERAND_LABEL,
     X86_OPERAND_LOCAL,
-    X86_OPERAND_MEM8_IMM,
     X86_OPERAND_MEM8_REG,
     X86_OPERAND_MEM64_EXTERN,
+    X86_OPERAND_MEM64_IMM,
     X86_OPERAND_MEM64_LOCAL,
     X86_OPERAND_REG8,
     X86_OPERAND_REG32,
@@ -133,24 +137,26 @@ struct x86_operand {
     x86_operand_type type;
     int r1;
     int r2;
-    int n;
+    int64_t n;
 };
 
 struct x86_operand *x86_operand_new_extern(extern_symbol symbol);
 
 struct x86_operand *x86_operand_new_imm8(int n);
 
-struct x86_operand *x86_operand_new_imm64(int n);
+struct x86_operand *x86_operand_new_imm32(int n);
+
+struct x86_operand *x86_operand_new_imm64(int64_t n);
 
 struct x86_operand *x86_operand_new_label(int n);
 
 struct x86_operand *x86_operand_new_local(local_symbol symbol);
 
-struct x86_operand *x86_operand_new_mem8_imm(int n);
-
 struct x86_operand *x86_operand_new_mem8_reg(x86_reg64 r1, x86_reg64 r2, int n);
 
 struct x86_operand *x86_operand_new_mem64_extern(extern_symbol symbol);
+
+struct x86_operand *x86_operand_new_mem64_imm(int n);
 
 struct x86_operand *x86_operand_new_mem64_local(local_symbol symbol);
 
@@ -174,11 +180,15 @@ struct x86_instr *x86_instr_new_align(int n);
 
 struct x86_instr *x86_instr_new_add(struct x86_operand *dst, struct x86_operand *src);
 
+struct x86_instr *x86_instr_new_and(struct x86_operand *dst, struct x86_operand *src);
+
 struct x86_instr *x86_instr_new_call(struct x86_operand *target);
 
 struct x86_instr *x86_instr_new_cmp(struct x86_operand *dst, struct x86_operand *src);
 
 struct x86_instr *x86_instr_new_jl(struct x86_operand *target);
+
+struct x86_instr *x86_instr_new_jmp(struct x86_operand *target);
 
 struct x86_instr *x86_instr_new_jns(struct x86_operand *target);
 

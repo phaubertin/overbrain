@@ -48,5 +48,10 @@ char *local_symbol_names[] = {
     [LOCAL_CHECK_INPUT] = "check_input",
     [LOCAL_FAIL_TOO_FAR_LEFT] = "fail_too_far_left",
     [LOCAL_FAIL_TOO_FAR_RIGHT] = "fail_too_far_right",
-    [LOCAL_M] = "m"
+    [LOCAL_M] = "m",
+    [LOCAL_MAIN] = "main",
+    [LOCAL_MSG_EOI] = "msg_eoi",
+    [LOCAL_MSG_FERR] = "msg_ferr",
+    [LOCAL_MSG_LEFT] = "msg_left",
+    [LOCAL_MSG_RIGHT] = "msg_right",
 };
