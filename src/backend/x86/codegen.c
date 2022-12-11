@@ -60,21 +60,21 @@ static void initialize_state(struct state *state) {
     state->label = 0;
 }
 
-static void lower_node_add(struct x86_builder *builder, struct state *state, const struct node *node) {
+static void generate_node_add(struct x86_builder *builder, struct state *state, const struct node *node) {
     x86_builder_append_instr(builder, x86_instr_new_add(
         x86_operand_new_mem8_reg(REGM, REGP, node->offset),
         x86_operand_new_imm8(node->n)
     ));
 }
 
-static void lower_node_right(struct x86_builder *builder, struct state *state, const struct node *node) {
+static void generate_node_right(struct x86_builder *builder, struct state *state, const struct node *node) {
     x86_builder_append_instr(builder, x86_instr_new_add(
         x86_operand_new_reg64(REGP),
         x86_operand_new_imm64(node->n)
     ));
 }
 
-static void lower_node_in(struct x86_builder *builder, struct state *state, const struct node *node) {
+static void generate_node_in(struct x86_builder *builder, struct state *state, const struct node *node) {
     x86_builder_append_instr(builder, x86_instr_new_mov(
         x86_operand_new_reg64(REG64ARG1),
         x86_operand_new_mem64_extern(EXTERN_STDIN)
@@ -96,7 +96,7 @@ static void lower_node_in(struct x86_builder *builder, struct state *state, cons
     ));
 }
 
-static void lower_node_out(struct x86_builder *builder, struct state *state, const struct node *node) {
+static void generate_node_out(struct x86_builder *builder, struct state *state, const struct node *node) {
     x86_builder_append_instr(builder, x86_instr_new_movzx(
         x86_operand_new_reg64(REG64ARG1),
         x86_operand_new_mem8_reg(REGM, REGP, node->offset)
@@ -110,10 +110,10 @@ static void lower_node_out(struct x86_builder *builder, struct state *state, con
     ));
 }
 
-/* forward declaration because mutually recursive with lower_node_loop() */
+/* forward declaration because mutually recursive with generate_node_loop() */
 static void generate_code_recursive(struct x86_builder *builder, struct state *state, const struct node *node);
 
-static void lower_node_loop(struct x86_builder *builder, struct state *state, const struct node *node) {
+static void generate_node_loop(struct x86_builder *builder, struct state *state, const struct node *node) {
     int start = state->label++;
     int end = state->label++;
     
@@ -150,7 +150,7 @@ static void lower_node_loop(struct x86_builder *builder, struct state *state, co
     x86_builder_append_instr(builder, x86_instr_new_label(end));
 }
 
-static void lower_node_check_right(struct x86_builder *builder, struct state *state, const struct node *node) {
+static void generate_node_check_right(struct x86_builder *builder, struct state *state, const struct node *node) {
     int skip = state->label++;
     
     x86_builder_append_instr(builder, x86_instr_new_mov(
@@ -176,7 +176,7 @@ static void lower_node_check_right(struct x86_builder *builder, struct state *st
     x86_builder_append_instr(builder, x86_instr_new_label(skip));
 }
 
-static void lower_node_check_left(struct x86_builder *builder, struct state *state, const struct node *node) {
+static void generate_node_check_left(struct x86_builder *builder, struct state *state, const struct node *node) {
     int skip = state->label++;
     
     x86_builder_append_instr(builder, x86_instr_new_mov(
@@ -203,26 +203,26 @@ static void generate_code_recursive(struct x86_builder *builder, struct state *s
     while(node != NULL) {
         switch(node->type) {
         case NODE_ADD:
-            lower_node_add(builder, state, node);
+            generate_node_add(builder, state, node);
             break;
         case NODE_RIGHT:
-            lower_node_right(builder, state, node);
+            generate_node_right(builder, state, node);
             break;
         case NODE_IN:
-            lower_node_in(builder, state, node);
+            generate_node_in(builder, state, node);
             break;
         case NODE_OUT:
-            lower_node_out(builder, state, node);
+            generate_node_out(builder, state, node);
             break;
         case NODE_LOOP:
         case NODE_STATIC_LOOP:
-            lower_node_loop(builder, state, node);
+            generate_node_loop(builder, state, node);
             break;
         case NODE_CHECK_RIGHT:
-            lower_node_check_right(builder, state, node);
+            generate_node_check_right(builder, state, node);
             break;
         case NODE_CHECK_LEFT:
-            lower_node_check_left(builder, state, node);
+            generate_node_check_left(builder, state, node);
             break;
         }
         node = node->next;
