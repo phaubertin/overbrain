@@ -35,10 +35,12 @@ sources = \
 	app/options.c \
 	backend/backend.c \
 	backend/c.c \
+	backend/elf64.c \
 	backend/nasm.c \
 	backend/common/symbols.c \
 	backend/x86/builder.c \
 	backend/x86/codegen.c \
+	backend/x86/encoder.c \
 	backend/x86/isa.c \
 	frontend/parser.c \
 	interpreter/slow.c \

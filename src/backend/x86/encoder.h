@@ -28,33 +28,37 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef BFC_OPTIONS_H
-#define BFC_OPTIONS_H
+#ifndef BFC_X86_ENCODER_H
+#define BFC_X86_ENCODER_H
 
-#include <stdbool.h>
+#include <stdint.h>
+#include <stddef.h>
+#include "isa.h"
 
-typedef enum {
-    ACTION_COMPILE,
-    ACTION_SLOW,
-    ACTION_TREE
-} option_action;
+typedef struct x86_encoder_function x86_encoder_function;
 
-typedef enum {
-    BACKEND_C,
-    BACKEND_ELF64,
-    BACKEND_NASM,
-    BACKEND_UKNOWN
-} option_backend;
+typedef struct {
+    int locals[NUM_LOCAL_SYMBOLS];
+    int externs[NUM_EXTERN_SYMBOLS];
+} x86_encoder_context;
 
-struct options {
-    option_action action;
-    option_backend backend;
-    const char *filename;
-    const char *ofilename;
-    int optimization_level;
-    bool no_check;
-};
+x86_encoder_function *x86_encoder_function_create(struct x86_instr *instrs, int address);
 
-bool parse_options(struct options *options, int argc, char *argv[]);
+void x86_encoder_function_free(x86_encoder_function *func);
+
+int x86_encoder_function_get_address(const x86_encoder_function *func);
+
+void x86_encoder_context_set_extern(x86_encoder_context *ctx, int symbol, int value);
+
+void x86_encoder_context_set_local(x86_encoder_context *ctx, int symbol, int value);
+
+size_t x86_encoder_compute_function_size(const x86_encoder_function *func);
+
+size_t encode_for_x86(
+    unsigned char *buf,
+    size_t bufsize,
+    const x86_encoder_function *func,
+    x86_encoder_context *ctx
+);
 
 #endif

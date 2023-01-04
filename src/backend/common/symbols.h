@@ -44,7 +44,9 @@ typedef enum {
     EXTERN_STDOUT
 } extern_symbol;
 
-extern const char *extern_symbol_names[];
+#define NUM_EXTERN_SYMBOLS 10
+
+extern const char *extern_symbol_names[NUM_EXTERN_SYMBOLS];
 
 typedef enum {
     LOCAL_CHECK_INPUT,
@@ -59,6 +61,8 @@ typedef enum {
     LOCAL_START,
 } local_symbol;
 
-extern const char *local_symbol_names[];
+#define NUM_LOCAL_SYMBOLS 10
+
+extern const char *local_symbol_names[NUM_LOCAL_SYMBOLS];
 
 #endif

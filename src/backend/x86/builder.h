@@ -28,8 +28,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef BFC_BACKEND_BUILDER_H
-#define BFC_BACKEND_BUILDER_H
+#ifndef BFC_X86_BUILDER_H
+#define BFC_X86_BUILDER_H
 
 #include "isa.h"
 
@@ -45,5 +45,7 @@ void x86_builder_append_instr(struct x86_builder *builder, struct x86_instr *ins
 void x86_builder_append_tree(struct x86_builder *builder, struct x86_instr *instr);
 
 struct x86_instr *x86_builder_get_first(const struct x86_builder *builder);
+
+struct x86_instr *x86_builder_get_last(const struct x86_builder *builder);
 
 #endif

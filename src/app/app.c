@@ -80,7 +80,7 @@ static void set_defaults(struct options *options, enum app app) {
         options->action = ACTION_TREE;
     }
     options->optimization_level = 3;
-    options->backend = BACKEND_C;
+    options->backend = BACKEND_ELF64;
 }
 
 int run_app(enum app app, int argc, char *argv[]) {

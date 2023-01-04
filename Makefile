@@ -36,7 +36,7 @@ all:
 .PHONY: clean
 clean:
 	make -C src clean
-	-rm -f examples/hello.c examples/hello
+	-rm -f examples/hello
 
 .PHONY: slow-hello
 slow-hello: all
@@ -53,9 +53,10 @@ build-hello: examples/hello
 run-hello: examples/hello
 	examples/hello
 
-examples/hello: examples/hello.c
+examples/hello: examples/hello.bf all
 
-examples/hello.c: examples/hello.bf all
+%: %.bf
+	src/bfc -backend elf64 -o $@ $<
 
 %.c: %.bf
-	src/bfc -o $@ $<
+	src/bfc -backend c -o $@ $<

@@ -28,8 +28,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef BFC_BACKEND_LOWERING_H
-#define BFC_BACKEND_LOWERING_H
+#ifndef BFC_X86_CODEGEN_H
+#define BFC_X86_CODEGEN_H
 
 #include "../../ir/node.h"
 #include "isa.h"

@@ -68,6 +68,7 @@ static const enum_value option_names[] = {
 
 static const enum_value backend_names[] = {
     {"c",           BACKEND_C},
+    {"elf64",       BACKEND_ELF64},
     {"nasm",        BACKEND_NASM},
     {NULL,          BACKEND_UKNOWN},
 };

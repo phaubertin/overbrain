@@ -73,3 +73,7 @@ void x86_builder_append_tree(struct x86_builder *builder, struct x86_instr *inst
 struct x86_instr *x86_builder_get_first(const struct x86_builder *builder) {
     return builder->head;
 }
+
+struct x86_instr *x86_builder_get_last(const struct x86_builder *builder) {
+    return builder->tail;
+}

@@ -28,9 +28,10 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef BFC_BACKEND_X86_H
-#define BFC_BACKEND_X86_H
+#ifndef BFC_X86_ISA_H
+#define BFC_X86_ISA_H
 
+#include <stdbool.h>
 #include <stdint.h>
 #include "../common/symbols.h"
 
@@ -121,13 +122,13 @@ typedef enum {
     X86_OPERAND_EXTERN,
     X86_OPERAND_IMM8,
     X86_OPERAND_IMM32,
-    X86_OPERAND_IMM64,
     X86_OPERAND_LABEL,
     X86_OPERAND_LOCAL,
     X86_OPERAND_MEM8_REG,
     X86_OPERAND_MEM64_EXTERN,
     X86_OPERAND_MEM64_IMM,
     X86_OPERAND_MEM64_LOCAL,
+    X86_OPERAND_MEM64_REL,
     X86_OPERAND_REG8,
     X86_OPERAND_REG32,
     X86_OPERAND_REG64
@@ -137,7 +138,7 @@ struct x86_operand {
     x86_operand_type type;
     int r1;
     int r2;
-    int64_t n;
+    int n;
 };
 
 struct x86_operand *x86_operand_new_extern(extern_symbol symbol);
@@ -145,8 +146,6 @@ struct x86_operand *x86_operand_new_extern(extern_symbol symbol);
 struct x86_operand *x86_operand_new_imm8(int n);
 
 struct x86_operand *x86_operand_new_imm32(int n);
-
-struct x86_operand *x86_operand_new_imm64(int64_t n);
 
 struct x86_operand *x86_operand_new_label(int n);
 
@@ -160,6 +159,8 @@ struct x86_operand *x86_operand_new_mem64_imm(int n);
 
 struct x86_operand *x86_operand_new_mem64_local(local_symbol symbol);
 
+struct x86_operand *x86_operand_new_mem64_rel(int n);
+
 struct x86_operand *x86_operand_new_reg8(x86_reg8 r);
 
 struct x86_operand *x86_operand_new_reg32(x86_reg32 r);
@@ -167,6 +168,14 @@ struct x86_operand *x86_operand_new_reg32(x86_reg32 r);
 struct x86_operand *x86_operand_new_reg64(x86_reg64 r);
 
 void x86_operand_free(struct x86_operand *oper);
+
+bool x86_operand_is_64bit(const struct x86_operand *oper);
+
+bool x86_operand_is_register(const struct x86_operand *oper);
+
+bool x86_operand_is_memory(const struct x86_operand *oper);
+
+bool x86_operand_is_immediate(const struct x86_operand *oper);
 
 struct x86_instr {
     x86_instr_op op;

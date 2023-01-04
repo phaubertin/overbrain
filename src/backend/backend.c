@@ -28,32 +28,70 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#define _POSIX_C_SOURCE 1 /* for fdopen() */
 #include <errno.h>
+#include <fcntl.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "backend.h"
 #include "c.h"
+#include "elf64.h"
 #include "nasm.h"
 
-void backend_generate(const struct node *root, const struct options *options) {
-    FILE *f;
-    
+FILE *open_output_file(const struct options *options) {
     if(options->ofilename == NULL) {
-        f = stdout;
-    } else {
-        f = fopen(options->ofilename, "w");
+        return stdout;
     }
     
-    if(f == NULL) {
-        fprintf(stderr, "Error opening output file: %s\n", strerror(errno));
+    if(options->backend != BACKEND_ELF64) {
+        FILE *f = fopen(options->ofilename, "w");
+        
+        if(f == NULL) {
+            fprintf(stderr, "Error opening output file (fopen()): %s\n", strerror(errno));
+            exit(EXIT_FAILURE);
+        }
+        
+        return f;
+    }
+
+#ifndef O_BINARY
+#define O_BINARY 0
+#endif
+    
+    int fd = open(options->ofilename, O_RDWR | O_CREAT | O_TRUNC | O_BINARY, 0777);
+    
+    if(fd < 0) {
+        fprintf(stderr, "Error opening output file (open()): %s\n", strerror(errno));
         exit(EXIT_FAILURE);
     }
+    
+    FILE *f = fdopen(fd, "w");
+    
+    if(f == NULL) {
+        fprintf(stderr, "Error opening output file (fdopen()): %s\n", strerror(errno));
+        exit(EXIT_FAILURE);
+    }
+    
+    return f;
+}
+
+void close_output_file(FILE *f) {
+    if(f != stdout) {
+        fclose(f);
+    }
+}
+
+void backend_generate(const struct node *root, const struct options *options) {
+    FILE *f = open_output_file(options);
     
     switch(options->backend) {
     case BACKEND_C:
         c_generate(f, root);
+        break;
+    case BACKEND_ELF64:
+        elf64_generate(f, root);
         break;
     case BACKEND_NASM:
         nasm_generate(f, root);
@@ -61,4 +99,6 @@ void backend_generate(const struct node *root, const struct options *options) {
     case BACKEND_UKNOWN:
         break;
     }
+    
+    close_output_file(f);
 }

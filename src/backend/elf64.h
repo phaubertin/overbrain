@@ -28,33 +28,12 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef BFC_OPTIONS_H
-#define BFC_OPTIONS_H
+#ifndef BFC_BACKEND_ELF64_H
+#define BFC_BACKEND_ELF64_H
 
-#include <stdbool.h>
+#include <stdio.h>
+#include "../ir/node.h"
 
-typedef enum {
-    ACTION_COMPILE,
-    ACTION_SLOW,
-    ACTION_TREE
-} option_action;
-
-typedef enum {
-    BACKEND_C,
-    BACKEND_ELF64,
-    BACKEND_NASM,
-    BACKEND_UKNOWN
-} option_backend;
-
-struct options {
-    option_action action;
-    option_backend backend;
-    const char *filename;
-    const char *ofilename;
-    int optimization_level;
-    bool no_check;
-};
-
-bool parse_options(struct options *options, int argc, char *argv[]);
+void elf64_generate(FILE *f, const struct node *root);
 
 #endif
