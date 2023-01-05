@@ -347,20 +347,34 @@ static void encode_instr_mov(struct state *state, const struct x86_instr *instr)
         switch(instr->src->type) {
         case X86_OPERAND_IMM32:
             encode_rex_prefix_for_mod_rm(state, instr->dst, 0);
-            write_byte(state, 0xc7);
-            encode_mod_rm_sib_disp(state, instr->dst, instr->src->r1);
-            write_word(state, instr->src->n);
+            if(instr->dst->type == X86_OPERAND_REG32) {
+                write_byte(state, 0xb8 | (instr->dst->r1 & 7));
+                write_word(state, instr->src->n);
+            } else {
+                write_byte(state, 0xc7);
+                encode_mod_rm_sib_disp(state, instr->dst, 0);
+                write_word(state, instr->src->n);
+            }
             break;
         case X86_OPERAND_LABEL:
             encode_rex_prefix_for_mod_rm(state, instr->dst, 0);
-            write_byte(state, 0xc7);
-            encode_mod_rm_sib_disp(state, instr->dst, instr->src->r1);
-            write_word(state, state->func->labels[instr->src->n]);
+            if(instr->dst->type == X86_OPERAND_REG32) {
+                write_byte(state, 0xb8 | (instr->dst->r1 & 7));
+                write_word(state, state->func->labels[instr->src->n]);
+            } else {
+                write_byte(state, 0xc7);
+                encode_mod_rm_sib_disp(state, instr->dst, 0);
+                write_word(state, state->func->labels[instr->src->n]);
+            }
             break;
         case X86_OPERAND_LOCAL:
+            /* always encoded using the long form since not all local addresses
+             * are known when the code size is computed. We don't want the code
+             * size to change between when we compute it and when we actually
+             * encode the instructions. */
             encode_rex_prefix_for_mod_rm(state, instr->dst, 0);
             write_byte(state, 0xc7);
-            encode_mod_rm_sib_disp(state, instr->dst, instr->src->r1);
+            encode_mod_rm_sib_disp(state, instr->dst, 0);
             write_word(state, state->ctx->locals[instr->src->n]);
             break;
         case X86_OPERAND_MEM64_EXTERN:
