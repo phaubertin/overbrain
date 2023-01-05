@@ -204,6 +204,11 @@ static void encode_alu_instr(
             encode_mod_rm_sib_disp(state, dst, instr_num);
             write_byte(state, src->n);
         } else {
+            /* There is a more compact encoding when the destination register is
+             * eax/rax (e.g. "48 3d 30 75 00 00" (6 bytes) instead of "48 81 f8
+             * 30 75 00 00" (7 bytes) for cmp rax, 0x7530). On the CPU where it
+             * was tested (an AMD Phenom II X4 965), using that encoding led to
+             * a ~5-10% slowdown. */
             write_byte(state, 0x81);
             encode_mod_rm_sib_disp(state, dst, instr_num);
             write_word(state, src->n);
