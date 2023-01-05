@@ -179,6 +179,10 @@ static void encode_mod_rm_sib_disp(
     }
 }
 
+static bool is_in_imm8_range(int value) {
+    return value >= -128 && value <= 127;
+}
+
 static void encode_alu_instr(
     struct state *state,
     int instr_num,
@@ -194,9 +198,16 @@ static void encode_alu_instr(
         break;
     case X86_OPERAND_IMM32:
         encode_rex_prefix_for_mod_rm(state, dst, instr_num);
-        write_byte(state, 0x81);
-        encode_mod_rm_sib_disp(state, dst, instr_num);
-        write_word(state, src->n);
+        
+        if(is_in_imm8_range(src->n)) {
+            write_byte(state, 0x83);
+            encode_mod_rm_sib_disp(state, dst, instr_num);
+            write_byte(state, src->n);
+        } else {
+            write_byte(state, 0x81);
+            encode_mod_rm_sib_disp(state, dst, instr_num);
+            write_word(state, src->n);
+        }
         break;
     case X86_OPERAND_REG8:
         encode_rex_prefix_for_mod_rm(state, dst, src->r1);
@@ -250,9 +261,16 @@ static void encode_instr_cmp(struct state *state, const struct x86_instr *instr)
 }
 
 static void encode_instr_jl(struct state *state, const struct x86_instr *instr) {
-    write_byte(state, 0x0f);
-    write_byte(state, 0x8c);
-    write_word(state, rel32(state, instr->dst, state->address + 6));
+    int rel8 = rel32(state, instr->dst, state->address + 2);
+    
+    if(is_in_imm8_range(rel8)) {
+        write_byte(state, 0x7c);
+        write_byte(state, rel8);
+    } else {
+        write_byte(state, 0x0f);
+        write_byte(state, 0x8c);
+        write_word(state, rel32(state, instr->dst, state->address + 6));
+    }
 }
 
 static void encode_instr_jmp(struct state *state, const struct x86_instr *instr) {
@@ -261,27 +279,55 @@ static void encode_instr_jmp(struct state *state, const struct x86_instr *instr)
         write_byte(state, 0x25);
         write_word(state, rel32(state, instr->dst, state->address + 6));
     } else {
-        write_byte(state, 0xe9);
-        write_word(state, rel32(state, instr->dst, state->address + 5));
+        int rel8 = rel32(state, instr->dst, state->address + 2);
+        
+        if(is_in_imm8_range(rel8)) {
+            write_byte(state, 0xeb);
+            write_byte(state, rel8);
+        } else {        
+            write_byte(state, 0xe9);
+            write_word(state, rel32(state, instr->dst, state->address + 5));
+        }
     }
 }
 
 static void encode_instr_jns(struct state *state, const struct x86_instr *instr) {
-    write_byte(state, 0x0f);
-    write_byte(state, 0x89);
-    write_word(state, rel32(state, instr->dst, state->address + 6));
+    int rel8 = rel32(state, instr->dst, state->address + 2);
+
+    if(is_in_imm8_range(rel8)) {
+        write_byte(state, 0x79);
+        write_byte(state, rel8);
+    } else {    
+        write_byte(state, 0x0f);
+        write_byte(state, 0x89);
+        write_word(state, rel32(state, instr->dst, state->address + 6));
+    }
 }
 
 static void encode_instr_jnz(struct state *state, const struct x86_instr *instr) {
-    write_byte(state, 0x0f);
-    write_byte(state, 0x85);
-    write_word(state, rel32(state, instr->dst, state->address + 6));
+    int rel8 = rel32(state, instr->dst, state->address + 2);
+    
+    if(is_in_imm8_range(rel8)) {
+        write_byte(state, 0x75);
+        write_byte(state, rel8);
+    } else {
+        write_byte(state, 0x0f);
+        write_byte(state, 0x85);
+        write_word(state, rel32(state, instr->dst, state->address + 6));
+    }
 }
 
 static void encode_instr_jz(struct state *state, const struct x86_instr *instr) {
-    write_byte(state, 0x0f);
-    write_byte(state, 0x84);
-    write_word(state, rel32(state, instr->dst, state->address + 6));
+    int rel8 = rel32(state, instr->dst, state->address + 2);
+    
+    if(is_in_imm8_range(rel8)) {
+        write_byte(state, 0x74);
+        write_byte(state, rel8);
+    } else {
+        write_byte(state, 0x0f);
+        write_byte(state, 0x84);
+        write_word(state, rel32(state, instr->dst, state->address + 6));
+    }
 }
 
 static void encode_instr_mov(struct state *state, const struct x86_instr *instr) {
@@ -461,20 +507,39 @@ static size_t count_labels(const struct x86_instr *instrs) {
 }
 
 static void resolve_labels(x86_encoder_function *func) {
-    x86_encoder_context dummy_context;
-    
-    struct state state;
-    initialize_state(&state, NULL, 0, func, &dummy_context);
-            
     memset(func->labels, 0, func->num_labels * sizeof(int));
     
-    for(const struct x86_instr *instr = func->instrs; instr != NULL; instr = instr->next) {
-        if(instr->op == X86_INSTR_LABEL) {
-            func->labels[instr->dst->n] = state.address;
+    /* There are two forms for encoding jump/branch instructions with an immediate
+     * value: a two-byte form with an 8-bit immediate value and a 5 or 6-byte
+     * form with a 32-bit immediate value. We use the two-byte form wherever we
+     * can and the longer form when the target is out of range for an 8-bit value.
+     * 
+     * Changing the form of a jump instruction changes the address of the labels
+     * that follow that instruction. In turn, these address changes may change
+     * the form of other jump instructions for which the target label was out of
+     * range but is now in range. For this reason, we re-compute the label
+     * addresses in a loop until they don't change anymore. */
+    while(true) {
+        x86_encoder_context dummy_context;
+    
+        struct state state;
+        initialize_state(&state, NULL, 0, func, &dummy_context);
+    
+        bool nochange = true;
+        
+        for(const struct x86_instr *instr = func->instrs; instr != NULL; instr = instr->next) {
+            if(instr->op == X86_INSTR_LABEL && func->labels[instr->dst->n] != state.address) {
+                func->labels[instr->dst->n] = state.address;
+                nochange = false;
+            }
+            
+            x86_encode_instruction(&state, instr);
         }
         
-        x86_encode_instruction(&state, instr);
-    }
+        if(nochange) {
+            break;
+        }
+    };
     
     for(const struct x86_instr *instr = func->instrs; instr != NULL; instr = instr->next) {
         if(instr->dst != NULL && instr->dst->type == X86_OPERAND_LABEL && func->labels[instr->dst->n] == 0) {

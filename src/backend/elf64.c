@@ -1178,6 +1178,8 @@ static struct x86_instr *generate_instructions_for_plt(const extern_type *extern
             x86_operand_new_label(plt0_label)
         ));
         
+        x86_builder_append_instr(&builder, x86_instr_new_align(16));
+        
         ++function_index;
     }
     
