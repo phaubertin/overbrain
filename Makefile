@@ -36,7 +36,11 @@ all:
 .PHONY: clean
 clean:
 	make -C src clean
-	-rm -f examples/hello
+	-rm -f \
+		examples/echo \
+		examples/hello \
+		examples/left \
+		examples/right
 
 .PHONY: slow-hello
 slow-hello: all
@@ -46,14 +50,42 @@ slow-hello: all
 tree-hello: all
 	src/bf -tree examples/hello.bf
 
-.PHONY: build-hello
-build-hello: examples/hello
+.PHONY: echo
+echo: examples/echo
+
+.PHONY: hello
+hello: examples/hello
+
+.PHONY: left
+left: examples/left
+
+.PHONY: right
+right: examples/right
+
+.PHONY: run-echo-eof
+run-echo-eof: examples/echo
+	echo -ne '' | examples/echo
+
+.PHONY: run-echo-hello
+run-echo-hello: examples/echo
+	echo -ne 'Hello World!\n\0' | examples/echo
 
 .PHONY: run-hello
 run-hello: examples/hello
 	examples/hello
 
+.PHONY: run-left
+run-left: examples/left
+	examples/left
+
+.PHONY: run-right
+run-right: examples/right
+	examples/right
+
+examples/echo: examples/echo.bf all
 examples/hello: examples/hello.bf all
+examples/left: examples/left.bf all
+examples/right: examples/right.bf all
 
 %: %.bf
 	src/bfc -backend elf64 -o $@ $<
