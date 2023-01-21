@@ -78,16 +78,12 @@ static size_t format_operand_mem64_extern(char *buf, size_t bufsize, const struc
     return snprintf(buf, bufsize, "qword [%s]", extern_symbol_names[operand->n]);
 }
 
-static size_t format_operand_mem64_imm(char *buf, size_t bufsize, const struct x86_operand *operand) {
-    return snprintf(buf, bufsize, "qword [%d]", (int)operand->n);
-}
-
 static size_t format_operand_mem64_local(char *buf, size_t bufsize, const struct x86_operand *operand) {
     return snprintf(buf, bufsize, "qword [%s]", local_symbol_names[operand->n]);
 }
 
 static size_t format_operand_mem64_rel(char *buf, size_t bufsize, const struct x86_operand *operand) {
-    return snprintf(buf, bufsize, "qword [%d]", (int)operand->n);
+    return snprintf(buf, bufsize, "qword [REL %" PRIu64 "]", operand->address);
 }
 
 static size_t format_operand_reg8(char *buf, size_t bufsize, const struct x86_operand *operand) {
@@ -126,9 +122,6 @@ static void format_operand(char *buf, size_t bufsize, const struct x86_operand *
         break;
     case X86_OPERAND_MEM64_EXTERN:
         retsize = format_operand_mem64_extern(buf, bufsize, operand);
-        break;
-    case X86_OPERAND_MEM64_IMM:
-        retsize = format_operand_mem64_imm(buf, bufsize, operand);
         break;
     case X86_OPERAND_MEM64_LOCAL:
         retsize = format_operand_mem64_local(buf, bufsize, operand);
@@ -285,6 +278,12 @@ static void emit_instr_ret(struct state *state, const struct x86_instr *instr) {
     fprintf(state->f, "\n");
 }
 
+static void emit_instr_segfault(struct state *state, const struct x86_instr *instr) {
+    /* hlt is a privileged instruction */
+    fprintf(state->f, INDENT "hlt\n");
+    fprintf(state->f, "\n");
+}
+
 static void emit_code(struct state *state, const struct x86_instr *instr) {
     while(instr != NULL) {
         switch(instr->op) {
@@ -339,6 +338,8 @@ static void emit_code(struct state *state, const struct x86_instr *instr) {
         case X86_INSTR_RET:
             emit_instr_ret(state, instr);
             break;
+        case X86_INSTR_SEGFAULT:
+            emit_instr_segfault(state, instr);
         }
         
         instr = instr->next;

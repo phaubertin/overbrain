@@ -149,21 +149,15 @@ struct x86_operand *x86_operand_new_mem64_extern(extern_symbol symbol) {
     return operand;
 }
 
-struct x86_operand *x86_operand_new_mem64_imm(int n) {
-    struct x86_operand *operand = oper_new(X86_OPERAND_MEM64_IMM);
-    operand->n = n;
-    return operand;
-}
-
 struct x86_operand *x86_operand_new_mem64_local(local_symbol symbol) {
     struct x86_operand *operand = oper_new(X86_OPERAND_MEM64_LOCAL);
     operand->n = symbol;
     return operand;
 }
 
-struct x86_operand *x86_operand_new_mem64_rel(int n) {
+struct x86_operand *x86_operand_new_mem64_rel(uint64_t address) {
     struct x86_operand *operand = oper_new(X86_OPERAND_MEM64_REL);
-    operand->n = n;
+    operand->address = address;
     return operand;
 }
 
@@ -192,7 +186,6 @@ void x86_operand_free(struct x86_operand *operand) {
 bool x86_operand_is_64bit(const struct x86_operand *oper) {
     switch(oper->type) {
     case X86_OPERAND_MEM64_EXTERN:
-    case X86_OPERAND_MEM64_IMM:
     case X86_OPERAND_MEM64_LOCAL:
     case X86_OPERAND_REG64:
         return true;
@@ -216,7 +209,6 @@ bool x86_operand_is_memory(const struct x86_operand *oper) {
     switch(oper->type) {
     case X86_OPERAND_MEM8_REG:
     case X86_OPERAND_MEM64_EXTERN:
-    case X86_OPERAND_MEM64_IMM:
     case X86_OPERAND_MEM64_LOCAL:
         return true;
     default:
@@ -419,7 +411,6 @@ struct x86_instr *x86_instr_new_mov(struct x86_operand *dst, struct x86_operand 
         {X86_OPERAND_REG64, X86_OPERAND_LABEL},
         {X86_OPERAND_REG64, X86_OPERAND_LOCAL},
         {X86_OPERAND_REG64, X86_OPERAND_MEM64_EXTERN},
-        {X86_OPERAND_REG64, X86_OPERAND_MEM64_IMM},
         {X86_OPERAND_REG64, X86_OPERAND_MEM64_LOCAL},
         {X86_OPERAND_REG64, X86_OPERAND_REG64},
     };
@@ -484,8 +475,11 @@ struct x86_instr *x86_instr_new_push(struct x86_operand *src) {
 }
 
 struct x86_instr *x86_instr_new_ret(void) {
-    struct x86_instr *instr = x86_instr_new(X86_INSTR_RET);
-    return instr;
+    return x86_instr_new(X86_INSTR_RET);
+}
+
+struct x86_instr *x86_instr_new_segfault(void) {
+    return x86_instr_new(X86_INSTR_SEGFAULT);
 }
 
 void x86_instr_free_node(struct x86_instr *instr) {

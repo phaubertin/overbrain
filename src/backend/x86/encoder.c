@@ -35,9 +35,9 @@
 #include "encoder.h"
 
 struct x86_encoder_function {
-    int address;
+    uint64_t address;
     int num_labels;
-    int *labels;
+    uint64_t *labels;
     const struct x86_instr *instrs;
 };
 
@@ -47,7 +47,7 @@ struct state {
     size_t length;
     const x86_encoder_function *func;
     const x86_encoder_context *ctx;
-    int address;
+    uint64_t address;
 };
 
 static void update_state_address(struct state *state) {
@@ -89,8 +89,19 @@ static void write_word(struct state *state, int value) {
     write_byte(state, (value >> 24) & 0xff);
 }
 
+static void write_word64(struct state *state, uint64_t value) {
+    write_byte(state, (value >>  0) & 0xff);
+    write_byte(state, (value >>  8) & 0xff);
+    write_byte(state, (value >> 16) & 0xff);
+    write_byte(state, (value >> 24) & 0xff);
+    write_byte(state, (value >> 32) & 0xff);
+    write_byte(state, (value >> 40) & 0xff);
+    write_byte(state, (value >> 48) & 0xff);
+    write_byte(state, (value >> 56) & 0xff);
+}
+
 static void encode_instr_align(struct state *state, const struct x86_instr *instr) {
-    int address = state->address;
+    uint64_t address = state->address;
     
     while((address & (instr->n - 1)) != 0) {
         write_byte(state, 0x90);    /* nop */
@@ -130,6 +141,24 @@ static void encode_rex_prefix_for_mod_rm(
     }
 }
 
+static int rel32(const struct state *state, const struct x86_operand *operand, uint64_t address) {
+    switch(operand->type) {
+    case X86_OPERAND_EXTERN:
+    case X86_OPERAND_MEM64_EXTERN:
+        return state->ctx->externs[operand->n] - address;
+    case X86_OPERAND_LOCAL:
+    case X86_OPERAND_MEM64_LOCAL:
+        return state->ctx->locals[operand->n] - address;
+    case X86_OPERAND_LABEL:
+        return state->func->labels[operand->n] - address;
+    case X86_OPERAND_MEM64_REL:
+        return operand->address - address;
+    default:
+        fprintf(stderr, "Error: unsupported operand type (rel32)\n");
+        exit(EXIT_FAILURE);
+    }
+}
+
 static void encode_mod_rm_sib_disp(
     struct state *state,
     const struct x86_operand *mod_rm,
@@ -149,28 +178,17 @@ static void encode_mod_rm_sib_disp(
         write_word(state, mod_rm->n);
         break;
     case X86_OPERAND_MEM64_EXTERN:
-        /* ModR/M byte */
-        write_byte(state, 0x04 | (rreg << 3));
-        /* SIB byte */
-        write_byte(state, 0x25);
-        /* displacement */
-        write_word(state, state->ctx->externs[mod_rm->n]);
-        break;
-    case X86_OPERAND_MEM64_IMM:
-        /* ModR/M byte */
-        write_byte(state, 0x04 | (rreg << 3));
-        /* SIB byte */
-        write_byte(state, 0x25);
-        /* displacement */
-        write_word(state, mod_rm->n);
-        break;
     case X86_OPERAND_MEM64_LOCAL:
         /* ModR/M byte */
-        write_byte(state, 0x04 | (rreg << 3));
-        /* SIB byte */
-        write_byte(state, 0x25);
-        /* displacement */
-        write_word(state, state->ctx->locals[mod_rm->n]);
+        write_byte(state, 0x05 | (rreg << 3));
+        /* displacement - assumes opcode is a single byte + REX prefix */
+        write_word(state, rel32(state, mod_rm, state->address + 7));
+        break;
+    case X86_OPERAND_MEM64_REL:
+        /* ModR/M byte */
+        write_byte(state, 0x05 | (rreg << 3));
+        /* displacement - assumes opcode is a single byte */
+        write_word(state, rel32(state, mod_rm, state->address + 6));
         break;
     default:
         /* ModR/M byte */
@@ -240,22 +258,6 @@ static void encode_instr_and(struct state *state, const struct x86_instr *instr)
     encode_alu_instr(state, 4, instr->dst, instr->src);
 }
 
-static int rel32(const struct state *state, const struct x86_operand *operand, int address) {
-    switch(operand->type) {
-    case X86_OPERAND_EXTERN:
-        return state->ctx->externs[operand->n] - address;
-    case X86_OPERAND_LOCAL:
-        return state->ctx->locals[operand->n] - address;
-    case X86_OPERAND_LABEL:
-        return state->func->labels[operand->n] - address;
-    case X86_OPERAND_MEM64_REL:
-        return operand->n - address;
-    default:
-        fprintf(stderr, "Error: unsupported operand type (rel32)\n");
-        exit(EXIT_FAILURE);
-    }
-}
-
 static void encode_instr_call(struct state *state, const struct x86_instr *instr) {
     write_byte(state, 0xe8);
     write_word(state, rel32(state, instr->dst, state->address + 5));
@@ -281,8 +283,7 @@ static void encode_instr_jl(struct state *state, const struct x86_instr *instr) 
 static void encode_instr_jmp(struct state *state, const struct x86_instr *instr) {
     if(instr->dst->type == X86_OPERAND_MEM64_REL) {
         write_byte(state, 0xff);
-        write_byte(state, 0x25);
-        write_word(state, rel32(state, instr->dst, state->address + 6));
+        encode_mod_rm_sib_disp(state, instr->dst, 4);
     } else {
         int rel8 = rel32(state, instr->dst, state->address + 2);
         
@@ -363,17 +364,11 @@ static void encode_instr_mov(struct state *state, const struct x86_instr *instr)
             break;
         case X86_OPERAND_LABEL:
             encode_rex_prefix_for_mod_rm(state, instr->dst, 0);
-            if(instr->dst->type == X86_OPERAND_REG32) {
-                write_byte(state, 0xb8 | (instr->dst->r1 & 7));
-                write_word(state, state->func->labels[instr->src->n]);
-            } else {
-                write_byte(state, 0xc7);
-                encode_mod_rm_sib_disp(state, instr->dst, 0);
-                write_word(state, state->func->labels[instr->src->n]);
-            }
+            write_byte(state, 0xb8 | (instr->dst->r1 & 7));
+            write_word64(state, state->func->labels[instr->src->n]);
             break;
         case X86_OPERAND_LOCAL:
-            /* always encoded using the long form since not all local addresses
+            /* Always encoded using the long form since not all local addresses
              * are known when the code size is computed. We don't want the code
              * size to change between when we compute it and when we actually
              * encode the instructions. */
@@ -383,7 +378,6 @@ static void encode_instr_mov(struct state *state, const struct x86_instr *instr)
             write_word(state, state->ctx->locals[instr->src->n]);
             break;
         case X86_OPERAND_MEM64_EXTERN:
-        case X86_OPERAND_MEM64_IMM:
         case X86_OPERAND_MEM64_LOCAL:
             encode_rex_prefix_for_mod_rm(state, instr->src, instr->dst->r1);
             write_byte(state, 0x8b);
@@ -432,9 +426,8 @@ static void encode_instr_pop(struct state *state, const struct x86_instr *instr)
 static void encode_instr_push(struct state *state, const struct x86_instr *instr) {
     if(instr->src->type == X86_OPERAND_MEM64_REL) {
         write_byte(state, 0xff);
-        write_byte(state, 0x35);
-        write_word(state, rel32(state, instr->src, state->address + 6));
-    }else if(instr->src->type == X86_OPERAND_IMM32) {
+        encode_mod_rm_sib_disp(state, instr->src, 6);
+    } else if(instr->src->type == X86_OPERAND_IMM32) {
         write_byte(state, 0x68);
         write_word(state, instr->src->n);
     } else {
@@ -450,6 +443,11 @@ static void encode_instr_push(struct state *state, const struct x86_instr *instr
 
 static void encode_instr_ret(struct state *state, const struct x86_instr *instr) {
     write_byte(state, 0xc3);
+}
+
+static void encode_instr_segfault(struct state *state, const struct x86_instr *instr) {
+    /* This is the encoding for hlt, which is a privileged instruction. */
+    write_byte(state, 0xf4);
 }
 
 static void x86_encode_instruction(
@@ -508,6 +506,9 @@ static void x86_encode_instruction(
     case X86_INSTR_RET:
         encode_instr_ret(state, instr);
         break;
+    case X86_INSTR_SEGFAULT:
+        encode_instr_segfault(state, instr);
+        break;
     }
     
     update_state_address(state);
@@ -526,7 +527,7 @@ static size_t count_labels(const struct x86_instr *instrs) {
 }
 
 static void resolve_labels(x86_encoder_function *func) {
-    memset(func->labels, 0, func->num_labels * sizeof(int));
+    memset(func->labels, 0, func->num_labels * sizeof(uint64_t));
     
     /* There are two forms for encoding jump/branch instructions with an immediate
      * value: a two-byte form with an 8-bit immediate value and a 5 or 6-byte
@@ -573,7 +574,7 @@ static void resolve_labels(x86_encoder_function *func) {
     }    
 }
 
-x86_encoder_function *x86_encoder_function_create(struct x86_instr *instrs, int address) {
+x86_encoder_function *x86_encoder_function_create(struct x86_instr *instrs, uint64_t address) {
     x86_encoder_function *func = malloc(sizeof(x86_encoder_function));
     
     if(func == NULL) {
@@ -590,7 +591,7 @@ x86_encoder_function *x86_encoder_function_create(struct x86_instr *instrs, int 
         return func;
     }
     
-    func->labels = malloc(func->num_labels * sizeof(int));
+    func->labels = malloc(func->num_labels * sizeof(uint64_t));
     
     if(func->labels == NULL) {
         fprintf(stderr, "Error: memory allocation (label array for x86 encoder)\n");
@@ -610,15 +611,15 @@ void x86_encoder_function_free(x86_encoder_function *func) {
     free(func);
 }
 
-int x86_encoder_function_get_address(const x86_encoder_function *func) {
+uint64_t x86_encoder_function_get_address(const x86_encoder_function *func) {
     return func->address;
 }
 
-void x86_encoder_context_set_extern(x86_encoder_context *ctx, int symbol, int value) {
+void x86_encoder_context_set_extern(x86_encoder_context *ctx, int symbol, uint64_t value) {
     ctx->externs[symbol] = value;
 }
 
-void x86_encoder_context_set_local(x86_encoder_context *ctx, int symbol, int value) {
+void x86_encoder_context_set_local(x86_encoder_context *ctx, int symbol, uint64_t value) {
     ctx->locals[symbol] = value;
 }
 

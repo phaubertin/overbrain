@@ -38,19 +38,19 @@
 typedef struct x86_encoder_function x86_encoder_function;
 
 typedef struct {
-    int locals[NUM_LOCAL_SYMBOLS];
-    int externs[NUM_EXTERN_SYMBOLS];
+    uint64_t locals[NUM_LOCAL_SYMBOLS];
+    uint64_t externs[NUM_EXTERN_SYMBOLS];
 } x86_encoder_context;
 
-x86_encoder_function *x86_encoder_function_create(struct x86_instr *instrs, int address);
+x86_encoder_function *x86_encoder_function_create(struct x86_instr *instrs, uint64_t address);
 
 void x86_encoder_function_free(x86_encoder_function *func);
 
-int x86_encoder_function_get_address(const x86_encoder_function *func);
+uint64_t x86_encoder_function_get_address(const x86_encoder_function *func);
 
-void x86_encoder_context_set_extern(x86_encoder_context *ctx, int symbol, int value);
+void x86_encoder_context_set_extern(x86_encoder_context *ctx, int symbol, uint64_t value);
 
-void x86_encoder_context_set_local(x86_encoder_context *ctx, int symbol, int value);
+void x86_encoder_context_set_local(x86_encoder_context *ctx, int symbol, uint64_t value);
 
 size_t x86_encoder_compute_function_size(const x86_encoder_function *func);
 

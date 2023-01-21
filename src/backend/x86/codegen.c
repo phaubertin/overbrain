@@ -362,10 +362,7 @@ struct x86_instr *generate_start_for_x86(void) {
     ));
     
     /* __libc_start_main should not return, crash if it does */
-    x86_builder_append_instr(&builder, x86_instr_new_mov(
-        x86_operand_new_reg64(REG64TEMP),
-        x86_operand_new_mem64_imm((uintptr_t)NULL)
-    ));
+    x86_builder_append_instr(&builder, x86_instr_new_segfault());
     
     x86_builder_append_instr(&builder, x86_instr_new_label(label_return));
     x86_builder_append_instr(&builder, x86_instr_new_ret());
@@ -430,7 +427,7 @@ struct x86_instr *generate_check_input_for_x86(void) {
     ));
 
     x86_builder_append_instr(&builder, x86_instr_new_cmp(
-        x86_operand_new_reg64(REG64ARG1),
+        x86_operand_new_reg32(REG32ARG1),
         x86_operand_new_imm32(EOF)
     ));
     x86_builder_append_instr(&builder, x86_instr_new_jnz(
