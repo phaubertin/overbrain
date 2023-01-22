@@ -37,6 +37,7 @@
 #include "options.h"
 #include "../backend/backend.h"
 #include "../frontend/parser.h"
+#include "../interpreter/jit.h"
 #include "../interpreter/slow.h"
 #include "../interpreter/tree.h"
 #include "../ir/node.h"
@@ -77,7 +78,7 @@ static void set_defaults(struct options *options, enum app app) {
     if(app == APP_BFC) {
         options->action = ACTION_COMPILE;
     } else {
-        options->action = ACTION_TREE;
+        options->action = ACTION_JIT;
     }
     options->optimization_level = 3;
     options->backend = BACKEND_ELF64;
@@ -105,8 +106,10 @@ int run_app(enum app app, int argc, char *argv[]) {
     
     if(options.action == ACTION_COMPILE) {
         backend_generate(optimized, &options);
-    } else {
+    } else if (options.action == ACTION_TREE) {
         tree_interpreter_run_program(optimized);
+    } else {
+        jit_interpreter_run_program(optimized);
     }
     
     node_free(optimized);

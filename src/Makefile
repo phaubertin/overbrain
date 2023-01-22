@@ -36,6 +36,7 @@ sources = \
 	backend/backend.c \
 	backend/c.c \
 	backend/elf64.c \
+	backend/jit.c \
 	backend/nasm.c \
 	backend/common/symbols.c \
 	backend/x86/builder.c \
@@ -43,6 +44,7 @@ sources = \
 	backend/x86/encoder.c \
 	backend/x86/isa.c \
 	frontend/parser.c \
+	interpreter/jit.c \
 	interpreter/slow.c \
 	interpreter/tree.c \
 	ir/builder.c \

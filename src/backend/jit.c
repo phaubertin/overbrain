@@ -28,34 +28,47 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef BFC_OPTIONS_H
-#define BFC_OPTIONS_H
+#include <stdio.h>
+#include <stdlib.h>
+#include "jit.h"
+#include "common/symbols.h"
+#include "x86/codegen.h"
+#include "x86/encoder.h"
+#include "x86/isa.h"
 
-#include <stdbool.h>
-
-typedef enum {
-    ACTION_COMPILE,
-    ACTION_JIT,
-    ACTION_SLOW,
-    ACTION_TREE
-} option_action;
-
-typedef enum {
-    BACKEND_C,
-    BACKEND_ELF64,
-    BACKEND_NASM,
-    BACKEND_UKNOWN
-} option_backend;
-
-struct options {
-    option_action action;
-    option_backend backend;
-    const char *filename;
-    const char *ofilename;
-    int optimization_level;
-    bool no_check;
+struct jit_compiled_program {
+    jit_main main;
 };
 
-bool parse_options(struct options *options, int argc, char *argv[]);
+/* TODO delete this */
+static void hello(void) {
+    printf("Hello World! (hardcoded)\n");
+}
 
-#endif
+static jit_compiled_program *allocate_compiled_program(void) {
+    jit_compiled_program *compiled = malloc(sizeof(jit_compiled_program));
+    
+    if(compiled == NULL) {
+        fprintf(stderr, "Error: memory allocation (JIT context)\n");
+        exit(EXIT_SUCCESS);
+    }
+    
+    return compiled;
+}
+
+jit_compiled_program *jit_compiled_program_create(const struct node *program) {
+    jit_compiled_program *compiled = allocate_compiled_program();
+    
+    /* TODO do stuff */
+    compiled->main = hello;
+        
+    return compiled;
+}
+
+void jit_compiled_program_free(jit_compiled_program *compiled) {
+    free(compiled);
+}
+
+jit_main jit_compiled_program_get_main(const jit_compiled_program *compiled) {
+    return compiled->main;
+}

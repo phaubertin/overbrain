@@ -41,6 +41,7 @@ typedef struct {
 typedef enum {
     OPTION_BACKEND,
     OPTION_COMPILE,
+    OPTION_JIT,
     OPTION_NO_CHECK,
     OPTION_O,
     OPTION_O0,
@@ -55,6 +56,7 @@ typedef enum {
 static const enum_value option_names[] = {
     {"-backend",    OPTION_BACKEND},
     {"-compile",    OPTION_COMPILE},
+    {"-jit",        OPTION_JIT},
     {"-no-check",   OPTION_NO_CHECK},
     {"-o",          OPTION_O},
     {"-O0",         OPTION_O0},
@@ -135,6 +137,9 @@ bool parse_options(struct options *options, int argc, char *argv[]) {
             break;
         case OPTION_COMPILE:
             options->action = ACTION_COMPILE;
+            break;
+        case OPTION_JIT:
+            options->action = ACTION_JIT;
             break;
         case OPTION_NO_CHECK:
             options->no_check = true;

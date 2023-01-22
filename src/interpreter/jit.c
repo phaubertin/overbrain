@@ -28,34 +28,13 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef BFC_OPTIONS_H
-#define BFC_OPTIONS_H
+#include "../backend/jit.h"
+#include "jit.h"
 
-#include <stdbool.h>
-
-typedef enum {
-    ACTION_COMPILE,
-    ACTION_JIT,
-    ACTION_SLOW,
-    ACTION_TREE
-} option_action;
-
-typedef enum {
-    BACKEND_C,
-    BACKEND_ELF64,
-    BACKEND_NASM,
-    BACKEND_UKNOWN
-} option_backend;
-
-struct options {
-    option_action action;
-    option_backend backend;
-    const char *filename;
-    const char *ofilename;
-    int optimization_level;
-    bool no_check;
-};
-
-bool parse_options(struct options *options, int argc, char *argv[]);
-
-#endif
+void jit_interpreter_run_program(const struct node *program) {
+    jit_compiled_program *compiled = jit_compiled_program_create(program);
+    
+    jit_compiled_program_get_main(compiled)();
+    
+    jit_compiled_program_free(compiled);
+}
