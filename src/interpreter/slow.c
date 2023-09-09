@@ -60,7 +60,7 @@ static void read_program(const char *filename) {
         
     errno = 0;
     
-    program.size = fread(program.bytes, 1, sizeof(program), file);
+    program.size = fread(program.bytes, 1, sizeof(program.bytes), file);
     
     if(errno != 0) {
         fprintf(stderr, "Error reading file: %s\n", strerror(errno));
