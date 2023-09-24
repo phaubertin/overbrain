@@ -28,12 +28,39 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef BFC_X86_CODEGEN_H
-#define BFC_X86_CODEGEN_H
-
-#include "../../ir/node.h"
+#include <stdio.h>
+#include <stdlib.h>
 #include "function.h"
 
-struct x86_function *generate_code_for_x86(const struct node *node);
+struct x86_function *x86_function_create(local_symbol symbol, struct x86_instr *instrs) {
+    struct x86_function *func = malloc(sizeof(struct x86_function));
+    
+    if(func == NULL) {
+        fprintf(stderr, "Error: memory allocation (x86 function)\n");
+        exit(EXIT_FAILURE);
+    }
+    
+    func->symbol = symbol;
+    func->instrs = instrs;
+    func->next = NULL;
 
-#endif
+    return func;
+}
+
+void x86_function_free(struct x86_function *func) {
+    if(func != NULL) {
+        x86_instr_free_tree(func->instrs);
+    }
+    
+    free(func);
+}
+
+struct x86_function *x86_function_find_by_local_symbol(struct x86_function *head, local_symbol symbol) {
+    struct x86_function *func = head;
+    
+    while(func != NULL && func->symbol != symbol) {
+        func = func->next;
+    }
+    
+    return func;
+}

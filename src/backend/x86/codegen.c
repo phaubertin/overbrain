@@ -32,10 +32,10 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "../../ir/query.h"
 #include "../common/symbols.h"
 #include "builder.h"
 #include "codegen.h"
-
 
 #define REGM        X86_REG_RBX
 #define REGP        X86_REG_R13
@@ -263,58 +263,53 @@ static void generate_code_recursive(struct x86_builder *builder, struct state *s
     }
 }
 
-static void generate_code(struct x86_builder *builder, struct state *state, const struct node *node) {
-    x86_builder_append_instr(builder, x86_instr_new_push(
-        x86_operand_new_reg64(X86_REG_RBP)
-    ));
-    x86_builder_append_instr(builder, x86_instr_new_push(
-        x86_operand_new_reg64(REGP)
-    ));
-    x86_builder_append_instr(builder, x86_instr_new_push(
-        x86_operand_new_reg64(REGM)
-    ));
-    
-    x86_builder_append_instr(builder, x86_instr_new_mov(
-        x86_operand_new_reg64(REGM),
-        x86_operand_new_mem64_local(LOCAL_M)
-    ));
-    x86_builder_append_instr(builder, x86_instr_new_mov(
-        x86_operand_new_reg32(REGP32),
-        x86_operand_new_imm32(0)
-    ));
-    
-    generate_code_recursive(builder, state, node);
-    
-    x86_builder_append_instr(builder, x86_instr_new_pop(
-        x86_operand_new_reg64(REGM)
-    ));
-    x86_builder_append_instr(builder, x86_instr_new_pop(
-        x86_operand_new_reg64(REGP)
-    ));
-    x86_builder_append_instr(builder, x86_instr_new_pop(
-        x86_operand_new_reg64(X86_REG_RBP)
-    ));
-    
-    x86_builder_append_instr(builder, x86_instr_new_mov(
-        x86_operand_new_reg32(REG32RETVAL),
-        x86_operand_new_imm32(EXIT_SUCCESS)
-    ));
-    x86_builder_append_instr(builder, x86_instr_new_ret());
-}
-
-struct x86_instr *generate_code_for_x86(const struct node *node) {
-    struct state state;
-    initialize_state(&state);
-    
+static struct x86_instr *generate_main(const struct node *node) {
     struct x86_builder builder;
     x86_builder_initialize_empty(&builder);
     
-    generate_code(&builder, &state, node);
+    x86_builder_append_instr(&builder, x86_instr_new_push(
+        x86_operand_new_reg64(X86_REG_RBP)
+    ));
+    x86_builder_append_instr(&builder, x86_instr_new_push(
+        x86_operand_new_reg64(REGP)
+    ));
+    x86_builder_append_instr(&builder, x86_instr_new_push(
+        x86_operand_new_reg64(REGM)
+    ));
+    
+    x86_builder_append_instr(&builder, x86_instr_new_mov(
+        x86_operand_new_reg64(REGM),
+        x86_operand_new_mem64_local(LOCAL_M)
+    ));
+    x86_builder_append_instr(&builder, x86_instr_new_mov(
+        x86_operand_new_reg32(REGP32),
+        x86_operand_new_imm32(0)
+    ));
+
+    struct state state;
+    initialize_state(&state);   
+    generate_code_recursive(&builder, &state, node);
+    
+    x86_builder_append_instr(&builder, x86_instr_new_pop(
+        x86_operand_new_reg64(REGM)
+    ));
+    x86_builder_append_instr(&builder, x86_instr_new_pop(
+        x86_operand_new_reg64(REGP)
+    ));
+    x86_builder_append_instr(&builder, x86_instr_new_pop(
+        x86_operand_new_reg64(X86_REG_RBP)
+    ));
+    
+    x86_builder_append_instr(&builder, x86_instr_new_mov(
+        x86_operand_new_reg32(REG32RETVAL),
+        x86_operand_new_imm32(EXIT_SUCCESS)
+    ));
+    x86_builder_append_instr(&builder, x86_instr_new_ret());
     
     return x86_builder_get_first(&builder);
 }
 
-struct x86_instr *generate_start_for_x86(void) {
+static struct x86_instr *generate_start(void) {
     struct x86_builder builder;
     x86_builder_initialize_empty(&builder);
     
@@ -370,51 +365,38 @@ struct x86_instr *generate_start_for_x86(void) {
     return x86_builder_get_first(&builder);
 }
 
-static void generate_fail_too_far(struct x86_builder *builder, local_symbol message) {
-    x86_builder_append_instr(builder, x86_instr_new_push(
+static struct x86_instr *generate_fail_too_far(local_symbol message) {
+    struct x86_builder builder;
+    x86_builder_initialize_empty(&builder);
+
+    x86_builder_append_instr(&builder, x86_instr_new_push(
         x86_operand_new_reg64(X86_REG_RBP)
     ));
     
-    x86_builder_append_instr(builder, x86_instr_new_mov(
+    x86_builder_append_instr(&builder, x86_instr_new_mov(
         x86_operand_new_reg64(REG64ARG1),
         x86_operand_new_mem64_extern(EXTERN_STDERR)
     ));
-    x86_builder_append_instr(builder, x86_instr_new_mov(
+    x86_builder_append_instr(&builder, x86_instr_new_mov(
         x86_operand_new_reg64(REG64ARG2),
         x86_operand_new_local(message)
     ));
-    x86_builder_append_instr(builder, x86_instr_new_call(
+    x86_builder_append_instr(&builder, x86_instr_new_call(
         x86_operand_new_extern(EXTERN_FPRINTF)
     ));
     
-    x86_builder_append_instr(builder, x86_instr_new_mov(
+    x86_builder_append_instr(&builder, x86_instr_new_mov(
         x86_operand_new_reg32(REG32ARG1),
         x86_operand_new_imm32(EXIT_FAILURE)
     ));
-    x86_builder_append_instr(builder, x86_instr_new_call(
+    x86_builder_append_instr(&builder, x86_instr_new_call(
         x86_operand_new_extern(EXTERN_EXIT)
-    ));  
-}
+    ));
 
-struct x86_instr *generate_fail_too_far_right_for_x86(void) {
-    struct x86_builder builder;
-    x86_builder_initialize_empty(&builder);
-    
-    generate_fail_too_far(&builder, LOCAL_MSG_RIGHT);
-    
     return x86_builder_get_first(&builder);
 }
 
-struct x86_instr *generate_fail_too_far_left_for_x86(void) {
-    struct x86_builder builder;
-    x86_builder_initialize_empty(&builder);
-    
-    generate_fail_too_far(&builder, LOCAL_MSG_LEFT);
-    
-    return x86_builder_get_first(&builder);
-}
-
-struct x86_instr *generate_check_input_for_x86(void) {
+static struct x86_instr *generate_check_input(void) {
     struct x86_builder builder;
     x86_builder_initialize_empty(&builder);
     
@@ -491,4 +473,46 @@ struct x86_instr *generate_check_input_for_x86(void) {
     x86_builder_append_instr(&builder, x86_instr_new_ret());
     
     return x86_builder_get_first(&builder);
+}
+
+struct x86_function *generate_code_for_x86(const struct node *node) {
+    struct x86_function *head = x86_function_create(
+        LOCAL_START,
+        generate_start()
+    );
+
+    struct x86_function *current = x86_function_create(
+        LOCAL_MAIN,
+        generate_main(node)
+    );
+    head->next = current;
+
+    if(tree_has_node_type(node, NODE_CHECK_RIGHT)) {
+        struct x86_function *next = x86_function_create(
+            LOCAL_FAIL_TOO_FAR_RIGHT,
+            generate_fail_too_far(LOCAL_MSG_RIGHT)
+        );
+        current->next = next;
+        current = next;
+    }
+    
+    if(tree_has_node_type(node, NODE_CHECK_LEFT)) {
+        struct x86_function *next = x86_function_create(
+            LOCAL_FAIL_TOO_FAR_LEFT,
+            generate_fail_too_far(LOCAL_MSG_LEFT)
+        );
+        current->next = next;
+        current = next;
+    }
+    
+    if(tree_has_node_type(node, NODE_IN)) {
+        struct x86_function *next = x86_function_create(
+            LOCAL_CHECK_INPUT,
+            generate_check_input()
+        );
+        current->next = next;
+        current = next;
+    }
+
+    return head;
 }

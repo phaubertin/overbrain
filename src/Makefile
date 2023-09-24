@@ -42,6 +42,7 @@ sources = \
 	backend/x86/builder.c \
 	backend/x86/codegen.c \
 	backend/x86/encoder.c \
+	backend/x86/function.c \
 	backend/x86/isa.c \
 	frontend/parser.c \
 	interpreter/jit.c \

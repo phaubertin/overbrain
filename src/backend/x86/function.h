@@ -28,12 +28,22 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef BFC_X86_CODEGEN_H
-#define BFC_X86_CODEGEN_H
+#ifndef BFC_X86_FUNCTION_H
+#define BFC_X86_FUNCTION_H
 
-#include "../../ir/node.h"
-#include "function.h"
+#include "isa.h"
+#include "../common/symbols.h"
 
-struct x86_function *generate_code_for_x86(const struct node *node);
+struct x86_function {
+    local_symbol symbol;
+    struct x86_instr *instrs;
+    struct x86_function *next;
+};
+
+struct x86_function *x86_function_create(local_symbol symbol, struct x86_instr *instrs);
+
+void x86_function_free(struct x86_function *func);
+
+struct x86_function *x86_function_find_by_local_symbol(struct x86_function *head, local_symbol symbol);
 
 #endif

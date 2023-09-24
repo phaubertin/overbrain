@@ -34,6 +34,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "../ir/query.h"
 #include "common/symbols.h"
 #include "x86/builder.h"
 #include "x86/codegen.h"
@@ -449,115 +450,45 @@ static void start_section(struct write_state *state, int index) {
     }
 }
 
-#define MAX_LOCAL_FUNCTIONS 5
-
-struct local_function {
-    local_symbol symbol;
-    size_t size;
-    struct x86_instr *instrs;
-    struct x86_encoder_function *encoder_func;
-};
-
-struct local_functions {
-    size_t n;
-    struct local_function funcs[MAX_LOCAL_FUNCTIONS];
-};
-
-static void generate_local_functions(struct local_functions *local_functions, const struct node *root) {
-    struct x86_instr *main_instrs = generate_code_for_x86(root);
-    
-    bool has_fail_right = false;
-    bool has_fail_left = false;
-    bool has_check_input = false;
-    
-    for(const struct x86_instr *instr = main_instrs; instr != NULL; instr = instr->next) {
-        if(instr->op == X86_INSTR_CALL && instr->dst->type == X86_OPERAND_LOCAL) {
-            switch(instr->dst->n) {
-            case LOCAL_FAIL_TOO_FAR_RIGHT:
-                has_fail_right = true;
-                break;
-            case LOCAL_FAIL_TOO_FAR_LEFT:
-                has_fail_left = true;
-                break;
-            case LOCAL_CHECK_INPUT:
-                has_check_input = true;
-                break;
-            default:
-                fprintf(
-                    stderr,
-                    "Error: (in elf64 backend) missing support for local function %s()\n",
-                    local_symbol_names[instr->dst->n]
-                );
-                exit(EXIT_FAILURE);
-            }
-        }
-    }
-    
-    int index = 0;
-    
-    local_functions->funcs[index].symbol = LOCAL_START;
-    local_functions->funcs[index].instrs = generate_start_for_x86();
-    ++index;
-    
-    local_functions->funcs[index].symbol = LOCAL_MAIN;
-    local_functions->funcs[index].instrs = main_instrs;
-    ++index;
-    
-    if(has_fail_right) {
-        local_functions->funcs[index].symbol = LOCAL_FAIL_TOO_FAR_RIGHT;
-        local_functions->funcs[index].instrs = generate_fail_too_far_right_for_x86();
-        ++index;
-    }
-    
-    if(has_fail_left) {
-        local_functions->funcs[index].symbol = LOCAL_FAIL_TOO_FAR_LEFT;
-        local_functions->funcs[index].instrs = generate_fail_too_far_left_for_x86();
-        ++index;
-    }
-    
-    if(has_check_input) {
-        local_functions->funcs[index].symbol = LOCAL_CHECK_INPUT;
-        local_functions->funcs[index].instrs = generate_check_input_for_x86();
-        ++index;
-    }
-    
-    local_functions->n = index;
-}
-
 typedef enum {
     EXTERN_TYPE_UNUSED = 0,
     EXTERN_TYPE_FUNCTION,
     EXTERN_TYPE_DATA
 } extern_type;
 
+struct extern_function {
+    extern_type type;
+};
+
 typedef enum {
     LOCAL_TYPE_UNUSED = 0,
     LOCAL_TYPE_REFERENCED
 } local_type;
 
+struct local_function {
+    local_type type;
+    size_t size;
+    struct x86_encoder_function *encoder_func;
+};
+
 static void enumerate_references(
-    local_type *local_types,
-    extern_type *extern_types,
-    const struct local_functions *local_functions
+    struct local_function *local_functions,
+    struct extern_function *extern_functions,
+    const struct x86_function *code
 ) {
-    memset(extern_types, 0, NUM_LOCAL_SYMBOLS * sizeof(local_type));
-    memset(extern_types, 0, NUM_EXTERN_SYMBOLS * sizeof(extern_type));
-    
-    for(int idx = 0; idx < local_functions->n; ++idx) {
-        const struct x86_instr *instr = local_functions->funcs[idx].instrs;
-        
-        while(instr != NULL) {
+    for(const struct x86_function *func = code; func != NULL; func = func->next) {
+        for(const struct x86_instr *instr = func->instrs; instr != NULL; instr = instr->next) {
             if(instr->dst != NULL) {
                 switch(instr->dst->type) {
                 case X86_OPERAND_EXTERN:
-                    extern_types[instr->dst->n] = EXTERN_TYPE_FUNCTION;
+                    extern_functions[instr->dst->n].type = EXTERN_TYPE_FUNCTION;
                     break;
                 case X86_OPERAND_MEM64_EXTERN:
-                    extern_types[instr->dst->n] = EXTERN_TYPE_DATA;
+                    extern_functions[instr->dst->n].type = EXTERN_TYPE_DATA;
                     break;
                 case X86_OPERAND_LOCAL:
                 case X86_OPERAND_MEM64_LOCAL:
-                    local_types[instr->dst->n] = LOCAL_TYPE_REFERENCED;
+                    local_functions[instr->dst->n].type = LOCAL_TYPE_REFERENCED;
                     break;
                 default:
                     break;
@@ -567,27 +498,28 @@ static void enumerate_references(
             if(instr->src != NULL) {
                 switch(instr->src->type) {
                 case X86_OPERAND_MEM64_EXTERN:
-                    extern_types[instr->src->n] = EXTERN_TYPE_DATA;
+                    extern_functions[instr->src->n].type = EXTERN_TYPE_DATA;
                     break;
                 case X86_OPERAND_LOCAL:
                 case X86_OPERAND_MEM64_LOCAL:
-                    local_types[instr->src->n] = LOCAL_TYPE_REFERENCED;
+                    local_functions[instr->src->n].type = LOCAL_TYPE_REFERENCED;
                     break;
                 default:
                     break;
                 }
             }
-            
-            instr = instr->next;
         }
     }
 }
 
-static int count_externs_with_type(const extern_type *extern_types, extern_type type) {
+static int count_externs_with_type(
+    const struct extern_function *extern_functions,
+    extern_type type
+) {
     int n = 0;
     
     for(int idx = 0; idx < NUM_EXTERN_SYMBOLS; ++idx) {
-        if(extern_types[idx] == type) {
+        if(extern_functions[idx].type == type) {
             ++n;
         }
     }
@@ -595,11 +527,11 @@ static int count_externs_with_type(const extern_type *extern_types, extern_type 
     return n;
 }
 
-static int count_externs(const extern_type *extern_types) {
+static int count_externs(const struct extern_function *extern_functions) {
     int n = 0;
     
     for(int idx = 0; idx < NUM_EXTERN_SYMBOLS; ++idx) {
-        if(extern_types[idx] != EXTERN_TYPE_UNUSED) {
+        if(extern_functions[idx].type != EXTERN_TYPE_UNUSED) {
             ++n;
         }
     }
@@ -607,12 +539,12 @@ static int count_externs(const extern_type *extern_types) {
     return n;
 }
 
-static int compute_dynstr_size(const extern_type *extern_types) {
+static int compute_dynstr_size(const struct extern_function *extern_functions) {
     /* one because there is a leading empty string */
     int size = 1 + sizeof(libcso6) + sizeof(glibc_225);
     
     for(int idx = 0; idx < NUM_EXTERN_SYMBOLS; ++idx) {
-        if(extern_types[idx] != EXTERN_TYPE_UNUSED) {
+        if(extern_functions[idx].type != EXTERN_TYPE_UNUSED) {
             size += strlen(extern_symbol_names[idx]) + 1;
         }
     }
@@ -624,16 +556,16 @@ static Elf64_Off align_offset(Elf64_Off offset, Elf64_Xword alignment) {
     return (offset + alignment - 1) & ~(alignment - 1);
 }
 
-static void compute_addresses_up_to_text_section(const extern_type *extern_types) {
-    const int num_extern_functions = count_externs_with_type(extern_types, EXTERN_TYPE_FUNCTION);
-    const int num_extern_data = count_externs_with_type(extern_types, EXTERN_TYPE_DATA);
+static void compute_addresses_up_to_text_section(const struct extern_function *extern_functions) {
+    const int num_extern_functions = count_externs_with_type(extern_functions, EXTERN_TYPE_FUNCTION);
+    const int num_extern_data = count_externs_with_type(extern_functions, EXTERN_TYPE_DATA);
     
     /* plus one for reserved STN_UNDEF entry */
     const int num_dynsyms = num_extern_functions + num_extern_data + 1;
     
     sections[SECTION_HASH].sh_size = (2 + NUM_HASH_BUCKETS + num_dynsyms) * sizeof(Elf64_Word);
     sections[SECTION_DYNSYM].sh_size = num_dynsyms * sections[SECTION_DYNSYM].sh_entsize;
-    sections[SECTION_DYNSTR].sh_size = compute_dynstr_size(extern_types);
+    sections[SECTION_DYNSTR].sh_size = compute_dynstr_size(extern_functions);
     sections[SECTION_GNU_VERSYM].sh_size = num_dynsyms * sections[SECTION_GNU_VERSYM].sh_entsize;
     sections[SECTION_RELA_DYN].sh_size = num_extern_data * sections[SECTION_RELA_DYN].sh_entsize;
     sections[SECTION_RELA_PLT].sh_size = num_extern_functions * sections[SECTION_RELA_PLT].sh_entsize;
@@ -651,38 +583,41 @@ static void compute_addresses_up_to_text_section(const extern_type *extern_types
     }
 }
 
-static void compute_local_functions_sizes(struct local_functions *local_functions) {
+static void compute_local_functions_sizes(
+    struct local_function *local_functions,
+    const struct x86_function *code
+) {
     int start_address = sections[SECTION_TEXT].sh_addr;
     int address = start_address;
     
-    for(int idx = 0; idx < local_functions->n; ++idx) {
-        struct local_function *func = &local_functions->funcs[idx];
+    for(const struct x86_function *func = code; func != NULL; func = func->next) {
+        struct local_function *local_func = &local_functions[func->symbol];
         
-        func->encoder_func = x86_encoder_function_create(func->instrs, address);
-        func->size = x86_encoder_compute_function_size(func->encoder_func);
+        local_func->encoder_func = x86_encoder_function_create(func->instrs, address);
+        local_func->size = x86_encoder_compute_function_size(local_func->encoder_func);
         
-        address += func->size;
+        address += local_func->size;
     }
     
     sections[SECTION_TEXT].sh_size = address - start_address;
 }
 
-static size_t compute_rodata_size(const local_type *local_types) {
+static size_t compute_rodata_size(const struct local_function *local_functions) {
     size_t size = 0;
     
-    if(local_types[LOCAL_MSG_EOI]) {
+    if(local_functions[LOCAL_MSG_EOI].type) {
         size += sizeof(msg_eoi);
     }
     
-    if(local_types[LOCAL_MSG_FERR]) {
+    if(local_functions[LOCAL_MSG_FERR].type) {
         size += sizeof(msg_ferr);
     }
     
-    if(local_types[LOCAL_MSG_LEFT]) {
+    if(local_functions[LOCAL_MSG_LEFT].type) {
         size += sizeof(msg_left);
     }
     
-    if(local_types[LOCAL_MSG_RIGHT]) {
+    if(local_functions[LOCAL_MSG_RIGHT].type) {
         size += sizeof(msg_right);
     }
     
@@ -702,14 +637,14 @@ static int compute_shstrtab_size(void) {
 }
 
 static void compute_remaining_section_addresses(
-    const local_type *local_types,
-    const extern_type *extern_types
+    const struct local_function *local_functions,
+    const struct extern_function *extern_functions
 ) {
     /* There are three reserved entries defined by the ELF spec for X86_64. */
-    int plt_got_entries = count_externs_with_type(extern_types, EXTERN_TYPE_FUNCTION) + 3;
-    int data_got_entries = count_externs_with_type(extern_types, EXTERN_TYPE_DATA);
+    int plt_got_entries = count_externs_with_type(extern_functions, EXTERN_TYPE_FUNCTION) + 3;
+    int data_got_entries = count_externs_with_type(extern_functions, EXTERN_TYPE_DATA);
     
-    sections[SECTION_RODATA].sh_size = compute_rodata_size(local_types);
+    sections[SECTION_RODATA].sh_size = compute_rodata_size(local_functions);
     sections[SECTION_PLTGOT].sh_size = plt_got_entries * sections[SECTION_PLTGOT].sh_entsize;
     sections[SECTION_BSS].sh_size = data_got_entries * sizeof(Elf64_Addr) + MSIZE;
     sections[SECTION_SHSTRTAB].sh_size = compute_shstrtab_size();
@@ -878,7 +813,10 @@ static unsigned long elf64_hash(const unsigned char *name) {
     return h;
 }
 
-static void write_hash_section(struct write_state *state, const extern_type *extern_types) {
+static void write_hash_section(
+    struct write_state *state,
+    const struct extern_function *extern_functions
+) {
     struct {
         Elf64_Word nbucket;
         Elf64_Word nchain;
@@ -888,7 +826,7 @@ static void write_hash_section(struct write_state *state, const extern_type *ext
     } hash;
    
     /* plus one for reserved STN_UNDEF entry */
-    const int num_dynsyms = count_externs(extern_types) + 1;
+    const int num_dynsyms = count_externs(extern_functions) + 1;
     const int hash_word_count = 2 + NUM_HASH_BUCKETS + num_dynsyms;
     
     memset(&hash, 0, sizeof(hash));
@@ -898,7 +836,7 @@ static void write_hash_section(struct write_state *state, const extern_type *ext
     int chain_index = 1;
     
     for(int idx = 0; idx < NUM_EXTERN_SYMBOLS; ++idx) {
-        if(extern_types[idx] == EXTERN_TYPE_UNUSED) {
+        if(extern_functions[idx].type == EXTERN_TYPE_UNUSED) {
             continue;
         }
         
@@ -975,7 +913,7 @@ static void add_to_strtab(struct strtab_state *state, int index, const char *str
 #define DYNSTR_GLIBC225 1
 #define DYNSTR_EXTERN(n) (n + 2)
 
-static struct strtab *create_dynstr(const extern_type *extern_types) {
+static struct strtab *create_dynstr(const struct extern_function *extern_functions) {
     struct strtab *strtab = create_strtab(sections[SECTION_DYNSTR].sh_size, NUM_EXTERN_SYMBOLS + 2);
     
     struct strtab_state state;
@@ -984,7 +922,7 @@ static struct strtab *create_dynstr(const extern_type *extern_types) {
     add_to_strtab(&state, DYNSTR_LIBCSO6, libcso6);
     
     for(int idx = 0; idx < NUM_EXTERN_SYMBOLS; ++idx) {
-        if(extern_types[idx] == EXTERN_TYPE_UNUSED) {
+        if(extern_functions[idx].type == EXTERN_TYPE_UNUSED) {
             continue;
         }
         
@@ -998,7 +936,7 @@ static struct strtab *create_dynstr(const extern_type *extern_types) {
 
 void write_dynamic_symbols_section(
     struct write_state *state,
-    const extern_type *extern_types,
+    const struct extern_function *extern_functions,
     const struct strtab *dynstr
 ) {
     start_section(state, SECTION_DYNSYM);
@@ -1012,7 +950,7 @@ void write_dynamic_symbols_section(
     Elf64_Addr got_addr = sections[got_section].sh_addr;
     
     for(int idx = 0; idx < NUM_EXTERN_SYMBOLS; ++idx) {
-        if(extern_types[idx] == EXTERN_TYPE_UNUSED) {
+        if(extern_functions[idx].type == EXTERN_TYPE_UNUSED) {
             continue;
         }
         
@@ -1020,7 +958,7 @@ void write_dynamic_symbols_section(
         symbol.st_name = dynstr->indexes[DYNSTR_EXTERN(idx)];
         symbol.st_other = 0;
         
-        if(extern_types[idx] == EXTERN_TYPE_FUNCTION) {
+        if(extern_functions[idx].type == EXTERN_TYPE_FUNCTION) {
             symbol.st_info = ELF64_ST_INFO(STB_GLOBAL, STT_FUNC);
             symbol.st_shndx = SHN_UNDEF;
             symbol.st_value = 0;
@@ -1045,7 +983,7 @@ void write_string_table_section(struct write_state *state, const struct strtab *
 
 void write_symbol_versioning_sections(
     struct write_state *state,
-    const extern_type *extern_types,
+    const struct extern_function *extern_functions,
     const struct strtab *dynstr
 ) {
     Elf64_Half zero_id = 0;
@@ -1056,7 +994,7 @@ void write_symbol_versioning_sections(
     write_bytes(state, &zero_id, sizeof(zero_id));
     
     for(int idx = 0; idx < NUM_EXTERN_SYMBOLS; ++idx) {
-        if(extern_types[idx] == EXTERN_TYPE_UNUSED) {
+        if(extern_functions[idx].type == EXTERN_TYPE_UNUSED) {
             continue;
         }
         write_bytes(state, &version_id, sizeof(version_id));
@@ -1083,7 +1021,10 @@ void write_symbol_versioning_sections(
     write_bytes(state, &vernaux, sizeof(vernaux));
 }
 
-void write_relocation_sections(struct write_state *state, const extern_type *extern_types) {
+void write_relocation_sections(
+    struct write_state *state,
+    const struct extern_function *extern_functions
+) {
     start_section(state, SECTION_RELA_DYN);
     
     const Elf64_Addr *bss_got = (const Elf64_Addr *)sections[SECTION_BSS].sh_addr;
@@ -1092,8 +1033,8 @@ void write_relocation_sections(struct write_state *state, const extern_type *ext
     Elf64_Xword symbol_index = 1;
     
     for(int idx = 0; idx < NUM_EXTERN_SYMBOLS; ++idx) {
-        if(extern_types[idx] != EXTERN_TYPE_DATA) {
-            if(extern_types[idx] != EXTERN_TYPE_UNUSED) {
+        if(extern_functions[idx].type != EXTERN_TYPE_DATA) {
+            if(extern_functions[idx].type != EXTERN_TYPE_UNUSED) {
                 ++symbol_index;
             }
             continue;
@@ -1119,8 +1060,8 @@ void write_relocation_sections(struct write_state *state, const extern_type *ext
     symbol_index = 1;
     
     for(int idx = 0; idx < NUM_EXTERN_SYMBOLS; ++idx) {
-        if(extern_types[idx] != EXTERN_TYPE_FUNCTION) {
-            if(extern_types[idx] != EXTERN_TYPE_UNUSED) {
+        if(extern_functions[idx].type != EXTERN_TYPE_FUNCTION) {
+            if(extern_functions[idx].type != EXTERN_TYPE_UNUSED) {
                 ++symbol_index;
             }
             continue;
@@ -1138,7 +1079,9 @@ void write_relocation_sections(struct write_state *state, const extern_type *ext
     }
 }
 
-static struct x86_instr *generate_instructions_for_plt(const extern_type *extern_types) {
+static struct x86_instr *generate_instructions_for_plt(
+    const struct extern_function *extern_functions
+) {
     struct x86_builder builder;
     x86_builder_initialize_empty(&builder);
     
@@ -1161,7 +1104,7 @@ static struct x86_instr *generate_instructions_for_plt(const extern_type *extern
     int function_index = 0;
     
     for(int idx = 0; idx < NUM_EXTERN_SYMBOLS; ++idx) {
-        if(extern_types[idx] != EXTERN_TYPE_FUNCTION) {
+        if(extern_functions[idx].type != EXTERN_TYPE_FUNCTION) {
             continue;
         }
         
@@ -1186,13 +1129,16 @@ static struct x86_instr *generate_instructions_for_plt(const extern_type *extern
     return x86_builder_get_first(&builder);
 }
 
-static void write_process_linkage_table(struct write_state *state, const extern_type *extern_types) {
+static void write_process_linkage_table(
+    struct write_state *state,
+    const struct extern_function *extern_functions
+) {
     x86_encoder_context dummy_context;
     
     int address = sections[SECTION_PLT].sh_addr;
     size_t size = sections[SECTION_PLT].sh_size;
     
-    struct x86_instr *instrs = generate_instructions_for_plt(extern_types);
+    struct x86_instr *instrs = generate_instructions_for_plt(extern_functions);
     
     x86_encoder_function *func = x86_encoder_function_create(instrs, address);
     
@@ -1215,9 +1161,9 @@ static void write_process_linkage_table(struct write_state *state, const extern_
 
 static void initialize_encoder_context(
     x86_encoder_context *context,
-    const struct local_functions *local_functions,
-    const local_type *local_types,
-    const extern_type *extern_types
+    const struct x86_function *code,
+    const struct local_function *local_functions,
+    const struct extern_function *extern_functions
 ) {
     
     /* external symbols */
@@ -1230,22 +1176,21 @@ static void initialize_encoder_context(
     int bss_got_index = 0;
     
     for(int idx = 0; idx < NUM_EXTERN_SYMBOLS; ++idx) {
-        if(extern_types[idx] == EXTERN_TYPE_FUNCTION) {
+        if(extern_functions[idx].type == EXTERN_TYPE_FUNCTION) {
             context->externs[idx] = (intptr_t)&plt[plt_offset];
             plt_offset += 16;
         }
         
-        if(extern_types[idx] == EXTERN_TYPE_DATA) {
+        if(extern_functions[idx].type == EXTERN_TYPE_DATA) {
             context->externs[idx] = (intptr_t)&bss_got[bss_got_index];
             ++bss_got_index;
         }
     }
     
     /* local symbols - functions */
-    
-    for(int idx = 0; idx < local_functions->n; ++idx) {
-        const struct local_function *func = &local_functions->funcs[idx];
-        context->locals[func->symbol] = x86_encoder_function_get_address(func->encoder_func);
+    for(const struct x86_function *func = code; func != NULL; func = func->next) {
+        struct x86_encoder_function *encoder_func = local_functions[func->symbol].encoder_func;
+        context->locals[func->symbol] = x86_encoder_function_get_address(encoder_func);
     }
     
     /* local symbols - data */
@@ -1253,22 +1198,22 @@ static void initialize_encoder_context(
     const char *rodata = (const char *)sections[SECTION_RODATA].sh_addr;
     int rodata_index = 0;
     
-    if(local_types[LOCAL_MSG_EOI]) {
+    if(local_functions[LOCAL_MSG_EOI].type) {
         context->locals[LOCAL_MSG_EOI] = (intptr_t)&rodata[rodata_index];
         rodata_index += sizeof(msg_eoi);
     }
     
-    if(local_types[LOCAL_MSG_FERR]) {
+    if(local_functions[LOCAL_MSG_FERR].type) {
         context->locals[LOCAL_MSG_FERR] = (intptr_t)&rodata[rodata_index];
         rodata_index += sizeof(msg_ferr);
     }
     
-    if(local_types[LOCAL_MSG_LEFT]) {
+    if(local_functions[LOCAL_MSG_LEFT].type) {
         context->locals[LOCAL_MSG_LEFT] = (intptr_t)&rodata[rodata_index];
         rodata_index += sizeof(msg_left);
     }
     
-    if(local_types[LOCAL_MSG_RIGHT]) {
+    if(local_functions[LOCAL_MSG_RIGHT].type) {
         context->locals[LOCAL_MSG_RIGHT] = (intptr_t)&rodata[rodata_index];
         rodata_index += sizeof(msg_right);
     }
@@ -1278,43 +1223,46 @@ static void initialize_encoder_context(
 
 static void write_text_section(
     struct write_state *state,
-    const struct local_functions *local_functions,
-    const local_type *local_types,
-    const extern_type *extern_types
+    const struct x86_function *code,
+    const struct local_function *local_functions,
+    const struct extern_function *extern_functions
 ) {
     x86_encoder_context context;
-    initialize_encoder_context(&context, local_functions, local_types, extern_types);
+    initialize_encoder_context(&context, code, local_functions, extern_functions);
     
     start_section(state, SECTION_TEXT);
-    
-    for(int idx = 0; idx < local_functions->n; ++idx) {
-        size_t size = local_functions->funcs[idx].size;
+
+    for(const struct x86_function *func = code; func != NULL; func = func->next) {
+        size_t size = local_functions[func->symbol].size;
         
         unsigned char *buffer = checked_malloc(size, "encoding buffer for local function");
         
-        encode_for_x86(buffer, size, local_functions->funcs[idx].encoder_func, &context);
+        encode_for_x86(buffer, size, local_functions[func->symbol].encoder_func, &context);
         write_bytes(state, buffer, size);
         
         free(buffer);
     }
 }
 
-static void write_rodata_section(struct write_state *state, const local_type *local_types) {
+static void write_rodata_section(
+    struct write_state *state,
+    const struct local_function *local_functions
+) {
     start_section(state, SECTION_RODATA);
     
-    if(local_types[LOCAL_MSG_EOI]) {
+    if(local_functions[LOCAL_MSG_EOI].type) {
         write_bytes(state, msg_eoi, sizeof(msg_eoi));
     }
     
-    if(local_types[LOCAL_MSG_FERR]) {
+    if(local_functions[LOCAL_MSG_FERR].type) {
         write_bytes(state, msg_ferr, sizeof(msg_ferr));
     }
     
-    if(local_types[LOCAL_MSG_LEFT]) {
+    if(local_functions[LOCAL_MSG_LEFT].type) {
         write_bytes(state, msg_left, sizeof(msg_left));
     }
     
-    if(local_types[LOCAL_MSG_RIGHT]) {
+    if(local_functions[LOCAL_MSG_RIGHT].type) {
         write_bytes(state, msg_right, sizeof(msg_right));
     }
 }
@@ -1342,7 +1290,10 @@ static void write_dynamic_section(struct write_state *state, const struct strtab
     write_bytes(state, dynamic, sizeof(dynamic));
 }
 
-static void write_got_section(struct write_state *state, const extern_type *extern_types) {
+static void write_got_section(
+    struct write_state *state,
+    const struct extern_function *extern_functions
+) {
     Elf64_Addr got[NUM_EXTERN_SYMBOLS + 3];
     
     /* reserved entries */
@@ -1356,7 +1307,7 @@ static void write_got_section(struct write_state *state, const extern_type *exte
     
     Elf64_Addr addr_in_plt = sections[SECTION_PLT].sh_addr + plt_entry_size + plt_jump_size;
     
-    const int num_got_entries = count_externs_with_type(extern_types, EXTERN_TYPE_FUNCTION);
+    const int num_got_entries = count_externs_with_type(extern_functions, EXTERN_TYPE_FUNCTION);
     
     int got_index;
     
@@ -1369,13 +1320,16 @@ static void write_got_section(struct write_state *state, const extern_type *exte
     write_bytes(state, got, got_index * sizeof(Elf64_Addr));
 }
 
-static void write_data_section(struct write_state *state, const extern_type *extern_types) {
+static void write_data_section(
+    struct write_state *state,
+    const struct extern_function *extern_functions
+) {
     const Elf64_Addr *bss = (const Elf64_Addr *)sections[SECTION_BSS].sh_addr;
     
     /* The .bss section starts with the GOT for data externs, followed by the
      * memory array used by the program. The .data section contains a single
      * pointer which points to memory array. */
-    int num_data_externs = count_externs_with_type(extern_types, EXTERN_TYPE_DATA);
+    int num_data_externs = count_externs_with_type(extern_functions, EXTERN_TYPE_DATA);
     const Elf64_Addr m = (Elf64_Addr)&bss[num_data_externs];
     
     start_section(state, SECTION_DATA);
@@ -1427,26 +1381,36 @@ static void write_section_headers(struct write_state *state, const struct strtab
     write_bytes(state, sections, sizeof(sections));
 }
 
-static void cleanup_local_functions(struct local_functions *local_functions) {
-    for(int idx = 0; idx < local_functions->n; ++idx) {
-        x86_encoder_function_free(local_functions->funcs[idx].encoder_func);
-        x86_instr_free_tree(local_functions->funcs[idx].instrs);
+static void cleanup_code(
+    struct x86_function *func,
+    struct local_function *local_functions
+) {
+    
+    while(func != NULL) {
+        x86_encoder_function_free(local_functions[func->symbol].encoder_func);
+        
+        struct x86_function *next = func->next;
+        x86_function_free(func);
+
+        func = next;
     }
 }
 
 void elf64_generate(FILE *f, const struct node *root) {
-    struct local_functions local_functions;
-    generate_local_functions(&local_functions, root);
+    struct x86_function *code = generate_code_for_x86(root);
+
+    struct local_function local_functions[NUM_LOCAL_SYMBOLS];
+    struct extern_function extern_functions[NUM_EXTERN_SYMBOLS];
+    memset(local_functions, 0, sizeof(local_functions));
+    memset(extern_functions, 0, sizeof(extern_functions));
+
+    enumerate_references(local_functions, extern_functions, code);
     
-    local_type local_types[NUM_LOCAL_SYMBOLS];
-    extern_type extern_types[NUM_EXTERN_SYMBOLS];
-    enumerate_references(local_types, extern_types, &local_functions);
+    compute_addresses_up_to_text_section(extern_functions);
     
-    compute_addresses_up_to_text_section(extern_types);
+    compute_local_functions_sizes(local_functions, code);
     
-    compute_local_functions_sizes(&local_functions);
-    
-    compute_remaining_section_addresses(local_types, extern_types);
+    compute_remaining_section_addresses(local_functions, extern_functions);
     
     struct write_state write_state;
     initialize_write_state(&write_state, f);
@@ -1457,29 +1421,29 @@ void elf64_generate(FILE *f, const struct node *root) {
     
     write_interpreter_section(&write_state);
     
-    write_hash_section(&write_state, extern_types);
+    write_hash_section(&write_state, extern_functions);
     
-    struct strtab *dynstr = create_dynstr(extern_types);
+    struct strtab *dynstr = create_dynstr(extern_functions);
     
-    write_dynamic_symbols_section(&write_state, extern_types, dynstr);
+    write_dynamic_symbols_section(&write_state, extern_functions, dynstr);
     
     write_string_table_section(&write_state, dynstr, SECTION_DYNSTR);
     
-    write_symbol_versioning_sections(&write_state, extern_types, dynstr);
+    write_symbol_versioning_sections(&write_state, extern_functions, dynstr);
     
-    write_relocation_sections(&write_state, extern_types);
+    write_relocation_sections(&write_state, extern_functions);
     
-    write_process_linkage_table(&write_state, extern_types);
+    write_process_linkage_table(&write_state, extern_functions);
     
-    write_text_section(&write_state, &local_functions, local_types, extern_types);
+    write_text_section(&write_state, code, local_functions, extern_functions);
     
-    write_rodata_section(&write_state, local_types);
+    write_rodata_section(&write_state, local_functions);
     
     write_dynamic_section(&write_state, dynstr);
     
-    write_got_section(&write_state, extern_types);
+    write_got_section(&write_state, extern_functions);
     
-    write_data_section(&write_state, extern_types);
+    write_data_section(&write_state, extern_functions);
     
     struct strtab *shstrtab = create_section_header_strings_table();
     
@@ -1491,5 +1455,5 @@ void elf64_generate(FILE *f, const struct node *root) {
     
     free_strtab(shstrtab);
     
-    cleanup_local_functions(&local_functions);
+    cleanup_code(code, local_functions);
 }
