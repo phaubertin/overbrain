@@ -52,15 +52,15 @@
 #define SYMBOL_VERSION_ID 2
 #define SHTAB_ALIGNMENT 8
 
-const char interp[] = "/lib64/ld-linux-x86-64.so.2";
-const char glibc_225[] = "GLIBC_2.2.5";
-const char libcso6[] = "libc.so.6";
+static const char interp[] = "/lib64/ld-linux-x86-64.so.2";
+static const char glibc_225[] = "GLIBC_2.2.5";
+static const char libcso6[] = "libc.so.6";
 
-const char msg_right[] = "Error: memory position out of bounds (overflow - too far right)\n";
-const char msg_left[] = "Error: memory position out of bounds (underflow - too far left)\n";
+static const char msg_right[] = "Error: memory position out of bounds (overflow - too far right)\n";
+static const char msg_left[] = "Error: memory position out of bounds (underflow - too far left)\n";
 /* no end of line (\n) for this one because we are calling perror() instead of fprintf() */
-const char msg_ferr[] = "Error when reading input";
-const char msg_eoi[] = "Error: reached end of input\n";
+static const char msg_ferr[] = "Error when reading input";
+static const char msg_eoi[] = "Error: reached end of input\n";
 
 enum dynamic_index {
     DYNAMIC_NEEDED = 0,
