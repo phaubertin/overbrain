@@ -81,7 +81,7 @@ static void generate_node_add2(
     const struct node *node,
     const struct node *prev
 ) {
-    /* peephole optimization: if the previous node was also a copy node with the same source, we
+    /* peephole optimization: if the previous node was also an add2 node with the same source, we
      * don't need to load the register again since it already contains the right value. */
     if(prev == NULL || prev->type != NODE_ADD2 || prev->n != node->n) {
         x86_builder_append_instr(builder, x86_instr_new_mov(
