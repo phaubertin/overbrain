@@ -37,6 +37,10 @@ typedef enum {
      *  - for - instruction, n is -1
      *  - optimization passes can produce nodes when n has other values */
     NODE_ADD,
+    /* add the value of cell at offset n relative to current data pointer to current memory cell */
+    NODE_ADD2,
+    /* set value of current memory cell to n */
+    NODE_SET,
     /* move memory position by a possibly negative value n to the right:
      *  - for > instruction, n is 1
      *  - for < instruction, n is -1
@@ -59,7 +63,7 @@ typedef enum {
 struct node {
     /* node type */
     node_type type;
-    /* node value "n" for NODE_ADD and NODE_RIGHT */
+    /* node value "n" for NODE_ADD and NODE_RIGHT, source offset for NODE_ADD2 */
     int n;
     /* offset of the operation relative to the current data pointer */
     int offset;
@@ -70,6 +74,10 @@ struct node {
 };
 
 struct node *node_new_add(int n, int offset);
+
+struct node *node_new_add2(int offset, int source_offset);
+
+struct node *node_new_set(int n, int offset);
 
 struct node *node_new_right(int n);
 

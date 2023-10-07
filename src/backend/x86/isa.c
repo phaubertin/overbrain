@@ -405,6 +405,7 @@ struct x86_instr *x86_instr_new_label(int n) {
 struct x86_instr *x86_instr_new_mov(struct x86_operand *dst, struct x86_operand *src) {
     const struct two_operand_types supported[] = {
         {X86_OPERAND_MEM8_REG, X86_OPERAND_REG8},
+        {X86_OPERAND_MEM8_REG, X86_OPERAND_IMM8},
         {X86_OPERAND_REG8, X86_OPERAND_MEM8_REG},
         {X86_OPERAND_REG32, X86_OPERAND_IMM32},
         {X86_OPERAND_REG32, X86_OPERAND_REG32},

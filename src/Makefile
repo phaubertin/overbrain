@@ -54,6 +54,7 @@ sources = \
 	optimizations/bound_checks.c \
 	optimizations/compute_offsets.c \
 	optimizations/dead_loops.c \
+	optimizations/loops.c \
 	optimizations/optimizations.c \
 	optimizations/run_length.c
 

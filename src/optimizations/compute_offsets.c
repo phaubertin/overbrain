@@ -89,6 +89,8 @@ static struct node *compute_offsets_in_body(
                 loop_elimination_recursive(node->body, loop_level + 1, offset)
             );
             break;
+        case NODE_SET:
+        case NODE_ADD2:
         case NODE_STATIC_LOOP:
         case NODE_CHECK_RIGHT:
         case NODE_CHECK_LEFT:

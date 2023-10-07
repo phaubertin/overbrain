@@ -339,9 +339,23 @@ static void encode_instr_jz(struct state *state, const struct x86_instr *instr) 
 static void encode_instr_mov(struct state *state, const struct x86_instr *instr) {
     switch(instr->dst->type) {
     case X86_OPERAND_MEM8_REG:
-        encode_rex_prefix_for_mod_rm(state, instr->dst, instr->src->r1);
-        write_byte(state, 0x88);
-        encode_mod_rm_sib_disp(state, instr->dst, instr->src->r1);
+        switch(instr->src->type) {
+        case X86_OPERAND_REG8:
+            encode_rex_prefix_for_mod_rm(state, instr->dst, instr->src->r1);
+            write_byte(state, 0x88);
+            encode_mod_rm_sib_disp(state, instr->dst, instr->src->r1);
+            break;
+        case X86_OPERAND_IMM8:
+            encode_rex_prefix_for_mod_rm(state, instr->dst, 0);
+            write_byte(state, 0xc6);
+            encode_mod_rm_sib_disp(state, instr->dst, 0);
+            write_byte(state, instr->src->n);
+            break;
+        default:
+            fprintf(stderr, "Error: unsupported source operand type (mov)\n");
+            exit(EXIT_FAILURE);
+            break;
+        }
         break;
     case X86_OPERAND_REG8:
         encode_rex_prefix_for_mod_rm(state, instr->src, instr->dst->r1);

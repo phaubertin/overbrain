@@ -57,6 +57,20 @@ struct node *node_new_add(int n, int offset) {
     return node;
 }
 
+struct node *node_new_add2(int offset, int source_offset) {
+    struct node *node = node_new(NODE_ADD2);
+    node->n = source_offset;
+    node->offset = offset;
+    return node;
+}
+
+struct node *node_new_set(int n, int offset) {
+    struct node *node = node_new(NODE_SET);
+    node->n = n;
+    node->offset = offset;
+    return node;
+}
+
 struct node *node_new_right(int n) {
     struct node *node = node_new(NODE_RIGHT);
     node->n = n;

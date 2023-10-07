@@ -69,6 +69,32 @@ static void generate_node_add(struct x86_builder *builder, struct state *state, 
     ));
 }
 
+static void generate_node_set(struct x86_builder *builder, struct state *state, const struct node *node) {
+    x86_builder_append_instr(builder, x86_instr_new_mov(
+        x86_operand_new_mem8_reg(REGM, REGP, node->offset),
+        x86_operand_new_imm8(node->n)
+    ));
+}
+static void generate_node_add2(
+    struct x86_builder *builder,
+    struct state *state,
+    const struct node *node,
+    const struct node *prev
+) {
+    /* peephole optimization: if the previous node was also a copy node with the same source, we
+     * don't need to load the register again since it already contains the right value. */
+    if(prev == NULL || prev->type != NODE_ADD2 || prev->n != node->n) {
+        x86_builder_append_instr(builder, x86_instr_new_mov(
+            x86_operand_new_reg8(REG8TEMP),
+            x86_operand_new_mem8_reg(REGM, REGP, node->n)
+        ));
+    }
+    x86_builder_append_instr(builder, x86_instr_new_add(
+        x86_operand_new_mem8_reg(REGM, REGP, node->offset),
+        x86_operand_new_reg8(REG8TEMP)
+    ));
+}
+
 static void generate_node_right(struct x86_builder *builder, struct state *state, const struct node *node) {
     x86_builder_append_instr(builder, x86_instr_new_add(
         x86_operand_new_reg64(REGP),
@@ -234,11 +260,19 @@ static void generate_node_check_left(struct x86_builder *builder, struct state *
 
 
 static void generate_code_recursive(struct x86_builder *builder, struct state *state, const struct node *node) {
+    const struct node *prev = NULL;
+
     while(node != NULL) {
         switch(node->type) {
         case NODE_ADD:
             generate_node_add(builder, state, node);
             break;
+        case NODE_ADD2:
+            generate_node_add2(builder, state, node, prev);
+            break;
+        case NODE_SET:
+            generate_node_set(builder, state, node);
+            break;   
         case NODE_RIGHT:
             generate_node_right(builder, state, node);
             break;
@@ -259,6 +293,7 @@ static void generate_code_recursive(struct x86_builder *builder, struct state *s
             generate_node_check_left(builder, state, node);
             break;
         }
+        prev = node;
         node = node->next;
     }
 }

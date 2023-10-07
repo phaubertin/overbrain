@@ -29,9 +29,13 @@
 
 include header.mk
 
-.PHONY: 
+.PHONY: all
 all:
 	make -C src
+
+.PHONY: install
+install: all
+	cp src/bf{,c} /usr/local/bin/
 
 .PHONY: clean
 clean:

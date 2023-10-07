@@ -175,6 +175,14 @@ static void emit_node_add(struct state *state, const struct node *node, int loop
     fprintf(state->f, INDENTFMT "m[p + %d] += %d;\n", INDENTARGS(loop_level + 1), node->offset, node->n);
 }
 
+static void emit_node_add2(struct state *state, const struct node *node, int loop_level) {
+    fprintf(state->f, INDENTFMT "m[p + %d] += m[p + %d];\n", INDENTARGS(loop_level + 1), node->offset, node->n);
+}
+
+static void emit_node_set(struct state *state, const struct node *node, int loop_level) {
+    fprintf(state->f, INDENTFMT "m[p + %d] = %d;\n", INDENTARGS(loop_level + 1), node->offset, node->n);
+}
+
 static void emit_node_right(struct state *state, const struct node *node, int loop_level) {
     fprintf(state->f, INDENTFMT "p += %d;\n", INDENTARGS(loop_level + 1), node->n);
 }
@@ -238,6 +246,12 @@ static void generate_code(struct state *state, const struct node *node, int loop
         switch(node->type) {
         case NODE_ADD:
             emit_node_add(state, node, loop_level);
+            break;
+        case NODE_ADD2:
+            emit_node_add2(state, node, loop_level);
+            break;
+        case NODE_SET:
+            emit_node_set(state, node, loop_level);
             break;
         case NODE_RIGHT:
             emit_node_right(state, node, loop_level);

@@ -73,6 +73,12 @@ static void run_body(const struct node *node) {
         case NODE_ADD:
             state.memory[state.ptr + node->offset] += node->n;
             break;
+        case NODE_SET:
+            state.memory[state.ptr + node->offset] = node->n;
+            break;
+        case NODE_ADD2:
+            state.memory[state.ptr + node->offset] += state.memory[state.ptr + node->n];
+            break;
         case NODE_RIGHT:
             state.ptr += node->n;
             break;

@@ -28,47 +28,11 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "../app/options.h" 
-#include "bound_checks.h"
-#include "compute_offsets.h"
-#include "dead_loops.h"
-#include "loops.h"
-#include "optimizations.h"
-#include "run_length.h"
+#ifndef BFC_OPTIMIZATIONS_LOOPS_H
+#define BFC_OPTIMIZATIONS_LOOPS_H
 
-struct node *run_optimizations(struct node *program, const struct options *options) {
-    /* memory allocation contract: caller is responsible for freeing the
-     * original (if it so chooses). This function is only responsible for
-     * freeing any intermediate trees it creates. */
-     
-    if(options->optimization_level == 0) {
-        if(options->no_check) {
-            return node_clone_tree(program);
-        }
-        return insert_bound_checks(program);
-    }
-    
-    struct node *run_length = run_length_optimize(program);
-    
-    struct node *no_dead_loops = remove_dead_loops(run_length);
-    
-    node_free(run_length);
-    
-    struct node *with_offsets = compute_offsets(no_dead_loops);
-    
-    node_free(no_dead_loops);
+#include "../ir/node.h"
 
-    struct node *loop_optimized = optimize_loops(with_offsets);
+struct node *optimize_loops(struct node *node);
 
-    node_free(with_offsets);
-    
-    if(options->no_check) {
-        return loop_optimized;
-    }
-    
-    struct node *with_checks = insert_bound_checks(loop_optimized);
-    
-    node_free(loop_optimized);
-     
-    return with_checks;
-}
+#endif

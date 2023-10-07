@@ -72,9 +72,14 @@ static void get_static_loop_body_offsets(
             update_minmax(access_offset, child_offset.max);
             break;
         case NODE_ADD:
+        case NODE_SET:
         case NODE_IN:
         case NODE_OUT:
             update_minmax(access_offset, node->offset);
+            break;
+        case NODE_ADD2:
+            update_minmax(access_offset, node->offset);
+            update_minmax(access_offset, node->n);
             break;
         case NODE_RIGHT:
         case NODE_LOOP:
@@ -140,10 +145,16 @@ static struct node *insert_bound_checks_recursive(
                 shift_offset += node->n;
                 break;
             case NODE_ADD:
+            case NODE_SET:
             case NODE_IN:
             case NODE_OUT:
                 builder_append_node(&segment_builder, node_clone(node));
                 update_minmax(&access_offset, node->offset + shift_offset);
+                break;
+            case NODE_ADD2:
+                builder_append_node(&segment_builder, node_clone(node));
+                update_minmax(&access_offset, node->offset + shift_offset);
+                update_minmax(&access_offset, node->n + shift_offset);
                 break;
             case NODE_LOOP:
             case NODE_CHECK_RIGHT:
