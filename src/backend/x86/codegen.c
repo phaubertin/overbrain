@@ -375,9 +375,9 @@ static struct x86_instr *generate_start(void) {
     x86_builder_append_instr(&builder, x86_instr_new_push(
         x86_operand_new_reg64(X86_REG_RSP)
     ));
-    x86_builder_append_instr(&builder, x86_instr_new_mov(
+    x86_builder_append_instr(&builder, x86_instr_new_lea(
         x86_operand_new_reg64(REG64ARG4),
-        x86_operand_new_label(label_return)
+        x86_operand_new_mem64_label(label_return)
     ));
     x86_builder_append_instr(&builder, x86_instr_new_mov(
         x86_operand_new_reg64(REG64ARG5),

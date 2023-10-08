@@ -89,17 +89,6 @@ static void write_word(struct state *state, int value) {
     write_byte(state, (value >> 24) & 0xff);
 }
 
-static void write_word64(struct state *state, uint64_t value) {
-    write_byte(state, (value >>  0) & 0xff);
-    write_byte(state, (value >>  8) & 0xff);
-    write_byte(state, (value >> 16) & 0xff);
-    write_byte(state, (value >> 24) & 0xff);
-    write_byte(state, (value >> 32) & 0xff);
-    write_byte(state, (value >> 40) & 0xff);
-    write_byte(state, (value >> 48) & 0xff);
-    write_byte(state, (value >> 56) & 0xff);
-}
-
 static void encode_instr_align(struct state *state, const struct x86_instr *instr) {
     uint64_t address = state->address;
     
@@ -150,6 +139,7 @@ static int rel32(const struct state *state, const struct x86_operand *operand, u
     case X86_OPERAND_MEM64_LOCAL:
         return state->ctx->locals[operand->n] - address;
     case X86_OPERAND_LABEL:
+    case X86_OPERAND_MEM64_LABEL:
         return state->func->labels[operand->n] - address;
     case X86_OPERAND_MEM64_REL:
         return operand->address - address;
@@ -178,6 +168,7 @@ static void encode_mod_rm_sib_disp(
         write_word(state, mod_rm->n);
         break;
     case X86_OPERAND_MEM64_EXTERN:
+    case X86_OPERAND_MEM64_LABEL:
     case X86_OPERAND_MEM64_LOCAL:
         /* ModR/M byte */
         write_byte(state, 0x05 | (rreg << 3));
@@ -381,11 +372,6 @@ static void encode_instr_mov(struct state *state, const struct x86_instr *instr)
                 encode_mod_rm_sib_disp(state, instr->dst, 0);
                 write_word(state, instr->src->n);
             }
-            break;
-        case X86_OPERAND_LABEL:
-            encode_rex_prefix_for_mod_rm(state, instr->dst, 0);
-            write_byte(state, 0xb8 | (instr->dst->r1 & 7));
-            write_word64(state, state->func->labels[instr->src->n]);
             break;
         case X86_OPERAND_MEM64_EXTERN:
         case X86_OPERAND_MEM64_LOCAL:
