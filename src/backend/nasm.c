@@ -338,6 +338,7 @@ static void emit_code(struct state *state, const struct x86_instr *instr) {
             break;
         case X86_INSTR_LEA:
             emit_instr_lea(state, instr);
+            break;
         case X86_INSTR_MOV:
             emit_instr_mov(state, instr);
             break;
