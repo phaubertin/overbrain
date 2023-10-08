@@ -38,7 +38,7 @@
 #include "x86/isa.h"
 
 #define INDENT "    "
-#define OPERAND_BUFFER_SIZE 32
+#define OPERAND_BUFFER_SIZE 64
 
 struct state {
     FILE *f;
@@ -76,6 +76,10 @@ static size_t format_operand_mem8_reg(char *buf, size_t bufsize, const struct x8
 
 static size_t format_operand_mem64_extern(char *buf, size_t bufsize, const struct x86_operand *operand) {
     return snprintf(buf, bufsize, "qword [%s]", extern_symbol_names[operand->n]);
+}
+
+static size_t format_operand_mem64_label(char *buf, size_t bufsize, const struct x86_operand *operand) {
+    return snprintf(buf, bufsize, "qword [.l%08d]", (int)operand->n);
 }
 
 static size_t format_operand_mem64_local(char *buf, size_t bufsize, const struct x86_operand *operand) {
@@ -122,6 +126,9 @@ static void format_operand(char *buf, size_t bufsize, const struct x86_operand *
         break;
     case X86_OPERAND_MEM64_EXTERN:
         retsize = format_operand_mem64_extern(buf, bufsize, operand);
+        break;
+    case X86_OPERAND_MEM64_LABEL:
+        retsize = format_operand_mem64_label(buf, bufsize, operand);
         break;
     case X86_OPERAND_MEM64_LOCAL:
         retsize = format_operand_mem64_local(buf, bufsize, operand);
@@ -232,6 +239,15 @@ static void emit_instr_label(struct state *state, const struct x86_instr *instr)
     fprintf(state->f, "%s:\n", dst);
 }
 
+static void emit_instr_lea(struct state *state, const struct x86_instr *instr) {
+    char dst[OPERAND_BUFFER_SIZE];
+    char src[OPERAND_BUFFER_SIZE];
+    format_operand(dst, sizeof(dst), instr->dst);
+    format_operand(src, sizeof(src), instr->src);
+    
+    fprintf(state->f, INDENT "lea %s, %s\n", dst, src);
+}
+
 static void emit_instr_mov(struct state *state, const struct x86_instr *instr) {
     char dst[OPERAND_BUFFER_SIZE];
     char src[OPERAND_BUFFER_SIZE];
@@ -319,6 +335,9 @@ static void emit_code(struct state *state, const struct x86_instr *instr) {
             break;
         case X86_INSTR_LABEL:
             emit_instr_label(state, instr);
+            break;
+        case X86_INSTR_LEA:
+            emit_instr_lea(state, instr);
             break;
         case X86_INSTR_MOV:
             emit_instr_mov(state, instr);

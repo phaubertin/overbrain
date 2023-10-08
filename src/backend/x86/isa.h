@@ -110,6 +110,7 @@ typedef enum {
     X86_INSTR_JNZ,
     X86_INSTR_JZ,
     X86_INSTR_LABEL,
+    X86_INSTR_LEA,
     X86_INSTR_MOV,
     X86_INSTR_MOVZX,
     X86_INSTR_OR,
@@ -127,6 +128,7 @@ typedef enum {
     X86_OPERAND_LOCAL,
     X86_OPERAND_MEM8_REG,
     X86_OPERAND_MEM64_EXTERN,
+    X86_OPERAND_MEM64_LABEL,
     X86_OPERAND_MEM64_LOCAL,
     X86_OPERAND_MEM64_REL,
     X86_OPERAND_REG8,
@@ -156,6 +158,8 @@ struct x86_operand *x86_operand_new_mem8_reg(x86_reg64 r1, x86_reg64 r2, int n);
 
 struct x86_operand *x86_operand_new_mem64_extern(extern_symbol symbol);
 
+struct x86_operand *x86_operand_new_mem64_label(int n);
+
 struct x86_operand *x86_operand_new_mem64_local(local_symbol symbol);
 
 struct x86_operand *x86_operand_new_mem64_rel(uint64_t address);
@@ -169,12 +173,6 @@ struct x86_operand *x86_operand_new_reg64(x86_reg64 r);
 void x86_operand_free(struct x86_operand *oper);
 
 bool x86_operand_is_64bit(const struct x86_operand *oper);
-
-bool x86_operand_is_register(const struct x86_operand *oper);
-
-bool x86_operand_is_memory(const struct x86_operand *oper);
-
-bool x86_operand_is_immediate(const struct x86_operand *oper);
 
 struct x86_instr {
     x86_instr_op op;
@@ -205,6 +203,8 @@ struct x86_instr *x86_instr_new_jnz(struct x86_operand *target);
 struct x86_instr *x86_instr_new_jz(struct x86_operand *target);
 
 struct x86_instr *x86_instr_new_label(int n);
+
+struct x86_instr *x86_instr_new_lea(struct x86_operand *dst, struct x86_operand *src);
 
 struct x86_instr *x86_instr_new_mov(struct x86_operand *dst, struct x86_operand *src);
 

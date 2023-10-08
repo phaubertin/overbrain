@@ -149,6 +149,12 @@ struct x86_operand *x86_operand_new_mem64_extern(extern_symbol symbol) {
     return operand;
 }
 
+struct x86_operand *x86_operand_new_mem64_label(int n) {
+    struct x86_operand *operand = oper_new(X86_OPERAND_MEM64_LABEL);
+    operand->n = n;
+    return operand;
+}
+
 struct x86_operand *x86_operand_new_mem64_local(local_symbol symbol) {
     struct x86_operand *operand = oper_new(X86_OPERAND_MEM64_LOCAL);
     operand->n = symbol;
@@ -186,43 +192,9 @@ void x86_operand_free(struct x86_operand *operand) {
 bool x86_operand_is_64bit(const struct x86_operand *oper) {
     switch(oper->type) {
     case X86_OPERAND_MEM64_EXTERN:
+    case X86_OPERAND_MEM64_LABEL:
     case X86_OPERAND_MEM64_LOCAL:
     case X86_OPERAND_REG64:
-        return true;
-    default:
-        return false;
-    }
-}
-
-bool x86_operand_is_register(const struct x86_operand *oper) {
-    switch(oper->type) {
-    case X86_OPERAND_REG8:
-    case X86_OPERAND_REG32:
-    case X86_OPERAND_REG64:
-        return true;
-    default:
-        return false;
-    }
-}
-
-bool x86_operand_is_memory(const struct x86_operand *oper) {
-    switch(oper->type) {
-    case X86_OPERAND_MEM8_REG:
-    case X86_OPERAND_MEM64_EXTERN:
-    case X86_OPERAND_MEM64_LOCAL:
-        return true;
-    default:
-        return false;
-    }
-}
-
-bool x86_operand_is_immediate(const struct x86_operand *oper) {
-    switch(oper->type) {
-    case X86_OPERAND_EXTERN:
-    case X86_OPERAND_IMM8:
-    case X86_OPERAND_IMM32:
-    case X86_OPERAND_LABEL:
-    case X86_OPERAND_LOCAL:
         return true;
     default:
         return false;
@@ -402,6 +374,19 @@ struct x86_instr *x86_instr_new_label(int n) {
     return instr;
 }
 
+struct x86_instr *x86_instr_new_lea(struct x86_operand *dst, struct x86_operand *src) {
+        const struct two_operand_types supported[] = {
+        {X86_OPERAND_REG64, X86_OPERAND_MEM64_LABEL},
+        {X86_OPERAND_REG64, X86_OPERAND_MEM64_LOCAL},
+    };
+    check_both_operand_types(dst, src, supported, sizeof(supported), "lea");
+    
+    struct x86_instr *instr = x86_instr_new(X86_INSTR_LEA);
+    instr->dst = dst;
+    instr->src = src;
+    return instr;
+}
+
 struct x86_instr *x86_instr_new_mov(struct x86_operand *dst, struct x86_operand *src) {
     const struct two_operand_types supported[] = {
         {X86_OPERAND_MEM8_REG, X86_OPERAND_REG8},
@@ -409,8 +394,6 @@ struct x86_instr *x86_instr_new_mov(struct x86_operand *dst, struct x86_operand 
         {X86_OPERAND_REG8, X86_OPERAND_MEM8_REG},
         {X86_OPERAND_REG32, X86_OPERAND_IMM32},
         {X86_OPERAND_REG32, X86_OPERAND_REG32},
-        {X86_OPERAND_REG64, X86_OPERAND_LABEL},
-        {X86_OPERAND_REG64, X86_OPERAND_LOCAL},
         {X86_OPERAND_REG64, X86_OPERAND_MEM64_EXTERN},
         {X86_OPERAND_REG64, X86_OPERAND_MEM64_LOCAL},
         {X86_OPERAND_REG64, X86_OPERAND_REG64},

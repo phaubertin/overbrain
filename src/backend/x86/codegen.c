@@ -375,17 +375,17 @@ static struct x86_instr *generate_start(void) {
     x86_builder_append_instr(&builder, x86_instr_new_push(
         x86_operand_new_reg64(X86_REG_RSP)
     ));
-    x86_builder_append_instr(&builder, x86_instr_new_mov(
+    x86_builder_append_instr(&builder, x86_instr_new_lea(
         x86_operand_new_reg64(REG64ARG4),
-        x86_operand_new_label(label_return)
+        x86_operand_new_mem64_label(label_return)
     ));
     x86_builder_append_instr(&builder, x86_instr_new_mov(
         x86_operand_new_reg64(REG64ARG5),
         x86_operand_new_reg64(REG64ARG4)
     ));
-    x86_builder_append_instr(&builder, x86_instr_new_mov(
+    x86_builder_append_instr(&builder, x86_instr_new_lea(
         x86_operand_new_reg64(REG64ARG1),
-        x86_operand_new_local(LOCAL_MAIN)
+        x86_operand_new_mem64_local(LOCAL_MAIN)
     ));
     x86_builder_append_instr(&builder, x86_instr_new_call(
         x86_operand_new_extern(EXTERN_LIBC_START_MAIN)
@@ -412,9 +412,9 @@ static struct x86_instr *generate_fail_too_far(local_symbol message) {
         x86_operand_new_reg64(REG64ARG1),
         x86_operand_new_mem64_extern(EXTERN_STDERR)
     ));
-    x86_builder_append_instr(&builder, x86_instr_new_mov(
+    x86_builder_append_instr(&builder, x86_instr_new_lea(
         x86_operand_new_reg64(REG64ARG2),
-        x86_operand_new_local(message)
+        x86_operand_new_mem64_local(message)
     ));
     x86_builder_append_instr(&builder, x86_instr_new_call(
         x86_operand_new_extern(EXTERN_FPRINTF)
@@ -467,9 +467,9 @@ static struct x86_instr *generate_check_input(void) {
         x86_operand_new_label(label_eoi)
     ));
     
-    x86_builder_append_instr(&builder, x86_instr_new_mov(
+    x86_builder_append_instr(&builder, x86_instr_new_lea(
         x86_operand_new_reg64(REG64ARG1),
-        x86_operand_new_local(LOCAL_MSG_FERR)
+        x86_operand_new_mem64_local(LOCAL_MSG_FERR)
     ));
     x86_builder_append_instr(&builder, x86_instr_new_call(
         x86_operand_new_extern(EXTERN_PERROR)
@@ -484,9 +484,9 @@ static struct x86_instr *generate_check_input(void) {
         x86_operand_new_reg64(REG64ARG1),
         x86_operand_new_mem64_extern(EXTERN_STDERR)
     ));
-    x86_builder_append_instr(&builder, x86_instr_new_mov(
+    x86_builder_append_instr(&builder, x86_instr_new_lea(
         x86_operand_new_reg64(REG64ARG2),
-        x86_operand_new_local(LOCAL_MSG_EOI)
+        x86_operand_new_mem64_local(LOCAL_MSG_EOI)
     ));
     x86_builder_append_instr(&builder, x86_instr_new_call(
         x86_operand_new_extern(EXTERN_FPRINTF)
