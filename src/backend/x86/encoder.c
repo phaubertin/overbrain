@@ -336,6 +336,12 @@ static void encode_instr_jz(struct state *state, const struct x86_instr *instr) 
     }
 }
 
+static void encode_instr_lea(struct state *state, const struct x86_instr *instr) {
+    encode_rex_prefix_for_mod_rm(state, instr->src, instr->dst->r1);
+    write_byte(state, 0x8d);
+    encode_mod_rm_sib_disp(state, instr->src, instr->dst->r1);
+}
+
 static void encode_instr_mov(struct state *state, const struct x86_instr *instr) {
     switch(instr->dst->type) {
     case X86_OPERAND_MEM8_REG:
@@ -380,16 +386,6 @@ static void encode_instr_mov(struct state *state, const struct x86_instr *instr)
             encode_rex_prefix_for_mod_rm(state, instr->dst, 0);
             write_byte(state, 0xb8 | (instr->dst->r1 & 7));
             write_word64(state, state->func->labels[instr->src->n]);
-            break;
-        case X86_OPERAND_LOCAL:
-            /* Always encoded using the long form since not all local addresses
-             * are known when the code size is computed. We don't want the code
-             * size to change between when we compute it and when we actually
-             * encode the instructions. */
-            encode_rex_prefix_for_mod_rm(state, instr->dst, 0);
-            write_byte(state, 0xc7);
-            encode_mod_rm_sib_disp(state, instr->dst, 0);
-            write_word(state, state->ctx->locals[instr->src->n]);
             break;
         case X86_OPERAND_MEM64_EXTERN:
         case X86_OPERAND_MEM64_LOCAL:
@@ -501,6 +497,9 @@ static void x86_encode_instruction(
         break;
     case X86_INSTR_LABEL:
         /* nothing to encode */
+        break;
+    case X86_INSTR_LEA:
+        encode_instr_lea(state, instr);
         break;
     case X86_INSTR_MOV:
         encode_instr_mov(state, instr);

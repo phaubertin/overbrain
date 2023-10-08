@@ -402,6 +402,18 @@ struct x86_instr *x86_instr_new_label(int n) {
     return instr;
 }
 
+struct x86_instr *x86_instr_new_lea(struct x86_operand *dst, struct x86_operand *src) {
+        const struct two_operand_types supported[] = {
+        {X86_OPERAND_REG64, X86_OPERAND_MEM64_LOCAL},
+    };
+    check_both_operand_types(dst, src, supported, sizeof(supported), "lea");
+    
+    struct x86_instr *instr = x86_instr_new(X86_INSTR_LEA);
+    instr->dst = dst;
+    instr->src = src;
+    return instr;
+}
+
 struct x86_instr *x86_instr_new_mov(struct x86_operand *dst, struct x86_operand *src) {
     const struct two_operand_types supported[] = {
         {X86_OPERAND_MEM8_REG, X86_OPERAND_REG8},
@@ -409,8 +421,8 @@ struct x86_instr *x86_instr_new_mov(struct x86_operand *dst, struct x86_operand 
         {X86_OPERAND_REG8, X86_OPERAND_MEM8_REG},
         {X86_OPERAND_REG32, X86_OPERAND_IMM32},
         {X86_OPERAND_REG32, X86_OPERAND_REG32},
+        /* TODO convert this to lea too*/
         {X86_OPERAND_REG64, X86_OPERAND_LABEL},
-        {X86_OPERAND_REG64, X86_OPERAND_LOCAL},
         {X86_OPERAND_REG64, X86_OPERAND_MEM64_EXTERN},
         {X86_OPERAND_REG64, X86_OPERAND_MEM64_LOCAL},
         {X86_OPERAND_REG64, X86_OPERAND_REG64},

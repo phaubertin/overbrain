@@ -110,6 +110,7 @@ typedef enum {
     X86_INSTR_JNZ,
     X86_INSTR_JZ,
     X86_INSTR_LABEL,
+    X86_INSTR_LEA,
     X86_INSTR_MOV,
     X86_INSTR_MOVZX,
     X86_INSTR_OR,
@@ -205,6 +206,8 @@ struct x86_instr *x86_instr_new_jnz(struct x86_operand *target);
 struct x86_instr *x86_instr_new_jz(struct x86_operand *target);
 
 struct x86_instr *x86_instr_new_label(int n);
+
+struct x86_instr *x86_instr_new_lea(struct x86_operand *dst, struct x86_operand *src);
 
 struct x86_instr *x86_instr_new_mov(struct x86_operand *dst, struct x86_operand *src);
 

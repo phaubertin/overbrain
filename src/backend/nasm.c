@@ -232,6 +232,15 @@ static void emit_instr_label(struct state *state, const struct x86_instr *instr)
     fprintf(state->f, "%s:\n", dst);
 }
 
+static void emit_instr_lea(struct state *state, const struct x86_instr *instr) {
+    char dst[OPERAND_BUFFER_SIZE];
+    char src[OPERAND_BUFFER_SIZE];
+    format_operand(dst, sizeof(dst), instr->dst);
+    format_operand(src, sizeof(src), instr->src);
+    
+    fprintf(state->f, INDENT "lea %s, %s\n", dst, src);
+}
+
 static void emit_instr_mov(struct state *state, const struct x86_instr *instr) {
     char dst[OPERAND_BUFFER_SIZE];
     char src[OPERAND_BUFFER_SIZE];
@@ -320,6 +329,8 @@ static void emit_code(struct state *state, const struct x86_instr *instr) {
         case X86_INSTR_LABEL:
             emit_instr_label(state, instr);
             break;
+        case X86_INSTR_LEA:
+            emit_instr_lea(state, instr);
         case X86_INSTR_MOV:
             emit_instr_mov(state, instr);
             break;
